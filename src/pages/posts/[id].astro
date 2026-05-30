@@ -1,0 +1,307 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../../layouts/Layout.astro';
+
+// getStaticPaths is required in Astro static mode for dynamic routes
+export async function getStaticPaths() {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  
+  const dataDir = process.env.DATA_DIR || '/home/deploy/ialexey-feed/data';
+  const prodFeedJsonPath = path.join(dataDir, 'feed.json');
+  const localFeedJsonPath = path.resolve('src/data/feed.json');
+
+  let parsedData = null;
+
+  if (fs.existsSync(prodFeedJsonPath)) {
+    try {
+      parsedData = JSON.parse(fs.readFileSync(prodFeedJsonPath, 'utf-8'));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  if (!parsedData && fs.existsSync(localFeedJsonPath)) {
+    try {
+      parsedData = JSON.parse(fs.readFileSync(localFeedJsonPath, 'utf-8'));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  let feedItems = [];
+  if (parsedData) {
+    if (Array.isArray(parsedData)) {
+      feedItems = parsedData;
+    } else if (parsedData.items && Array.isArray(parsedData.items)) {
+      feedItems = parsedData.items;
+    }
+  }
+
+  return feedItems.map((item: any) => {
+    const id = item.message_id || item.id.split(':').pop();
+    return {
+      params: { id: String(id) },
+      props: { item },
+    };
+  });
+}
+
+interface Props {
+  item: any;
+}
+
+const { id } = Astro.params;
+const { item } = Astro.props as Props;
+
+const channelUsername = "iAlexeyRu";
+const siteAuthor = "Алексей Гетманец";
+
+// Formatting helpers matching index.astro
+function cleanText(text: string) {
+  return (text || "").replace(/\n{3,}/g, "\n\n").trim();
+}
+function compactText(text: string) {
+  return cleanText(text).replace(/\s+/g, " ").trim();
+}
+function truncateText(value: string, limit: number) {
+  const text = compactText(value);
+  if (text.length <= limit) {
+    return text;
+  }
+  return text.slice(0, Math.max(0, limit - 1)).trimEnd() + "…";
+}
+
+// Smart classification of category badges
+function getSmartBadge(text: string) {
+  const t = (text || "").toLowerCase();
+  if (t.includes("слив") || t.includes("утек") || t.includes("секрет") || t.includes("leak") || t.includes("эксклюзив")) {
+    return { label: "Сливы", class: "badge--leaks" };
+  }
+  if (t.includes("gpt") || t.includes("gemini") || t.includes("claude") || t.includes("anthropic") || t.includes("openai") || t.includes("google") || t.includes("llama")) {
+    return { label: "ИИ-Модели", class: "badge--ai" };
+  }
+  if (t.includes("нейросеть") || t.includes("midjourney") || t.includes("sora") || t.includes("генераци") || t.includes("искусствен")) {
+    return { label: "Нейросети", class: "badge--neural" };
+  }
+  return { label: "Новости", class: "badge--news" };
+}
+
+const postTitle = truncateText(item.text || "", 86) || `Пост Telegram ${id}`;
+const postDescription = truncateText(item.text || "", 220) || "Сливы и новости ИИ от Алексея Гетманца: короткая Telegram-лента, RSS и статические страницы постов.";
+
+const localUrl = `https://ialexey.ru/posts/${id}`;
+const telegramUrl = item.url || `https://t.me/${channelUsername}/${id}`;
+
+// Format date helper matching Europe/Moscow timezone format: DD.MM.YYYY HH:MM
+function formatDate(value: string) {
+  if (!value) return "";
+  try {
+    const date = new Date(value);
+    const formatter = new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Europe/Moscow",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return formatter.format(date).replace(",", "");
+  } catch (e) {
+    return value;
+  }
+}
+
+const formattedDate = formatDate(item.date);
+const badge = getSmartBadge(item.text);
+
+// Schema.org Article dynamic markup
+const schemaObject = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": postTitle,
+  "description": postDescription,
+  "url": localUrl,
+  "datePublished": item.date,
+  "dateModified": item.date,
+  "inLanguage": "ru-RU",
+  "author": {
+    "@type": "Person",
+    "name": siteAuthor,
+    "url": "https://ialexey.ru/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": siteAuthor,
+    "url": "https://ialexey.ru/"
+  },
+  "mainEntityOfPage": localUrl,
+  "isBasedOn": telegramUrl
+};
+
+const schema = JSON.stringify(schemaObject);
+---
+<Layout title={`${postTitle} | ${siteAuthor}`} description={postDescription} schema={schema} canonicalUrl={localUrl}>
+  <main class="post-main">
+      
+      <!-- Scoped back button -->
+      <a class="back-link" href="/">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="back-arrow"><path d="m15 18-6-6 6-6"/></svg>
+          <span>На главную</span>
+      </a>
+
+      <article class="post-article">
+          <div class="meta-row">
+              <span class={`badge ${badge.class}`}>{badge.label}</span>
+              <div class="meta-right">
+                  <a href={telegramUrl} target="_blank" rel="noopener" class="tg-source">Telegram / @{channelUsername}</a>
+                  <span class="meta-dot">•</span>
+                  <time datetime={item.date}>{formattedDate} MSK</time>
+              </div>
+          </div>
+          
+          <h1 class="article-title">{postTitle}</h1>
+          
+          {item.image && (
+              <div class="article-image-wrap">
+                  <img 
+                      src={`/${item.image}`} 
+                      class="article-image" 
+                      alt={postTitle}
+                  />
+              </div>
+          )}
+          
+          <div class="article-body" set:html={item.html || item.text}></div>
+      </article>
+  </main>
+</Layout>
+
+<style>
+  .post-main {
+      max-width: 800px;
+      margin: 1rem auto 4rem;
+  }
+
+  /* Elegant modern back link */
+  .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-main);
+      margin-bottom: 2rem;
+      transition: color 0.2s, transform 0.2s;
+  }
+
+  .back-arrow {
+      width: 16px;
+      height: 16px;
+      transition: transform 0.2s;
+  }
+
+  .back-link:hover {
+      color: var(--text-header);
+      transform: translateX(-4px);
+  }
+
+  .post-article {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+  }
+
+  .meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+  }
+
+  .meta-right {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #6c7482;
+  }
+
+  .tg-source {
+      color: #6c7482;
+      border-bottom: 1px dashed rgba(255,255,255,0.15);
+  }
+
+  .tg-source:hover {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+  }
+
+  .meta-dot {
+      color: rgba(255,255,255,0.15);
+  }
+
+  .article-title {
+      font-size: 2.25rem;
+      line-height: 1.25;
+      color: var(--text-header);
+      margin: 0 0 2rem;
+      letter-spacing: -1px;
+  }
+
+  .article-image-wrap {
+      margin-bottom: 2rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background-color: #000;
+  }
+
+  .article-image {
+      width: 100%;
+      height: auto;
+      max-height: 600px;
+      display: block;
+      object-fit: contain;
+  }
+
+  .article-body {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      color: var(--text-main);
+  }
+
+  .article-body :global(a) {
+      color: var(--accent);
+      border-bottom: 1px solid rgba(255, 42, 59, 0.3);
+  }
+
+  .article-body :global(a:hover) {
+      border-bottom-color: var(--accent);
+  }
+
+  @media (max-width: 768px) {
+      .post-article {
+          padding: 1.5rem;
+      }
+      .article-title {
+          font-size: 1.75rem;
+          margin-bottom: 1.5rem;
+      }
+      .meta-row {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.75rem;
+      }
+      .meta-right {
+          width: 100%;
+          justify-content: flex-start;
+      }
+  }
+</style>

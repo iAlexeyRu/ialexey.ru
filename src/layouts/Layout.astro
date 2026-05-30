@@ -1,0 +1,551 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+  schema?: string; // Stringified JSON-LD
+  canonicalUrl?: string;
+}
+
+const {
+  title = "Алексей Гетманец | Сливы и новости ИИ",
+  description = "Сливы и новости ИИ от Алексея Гетманца: короткая Telegram-лента, RSS и статические страницы постов.",
+  schema,
+  canonicalUrl = Astro.url.href
+} = Astro.props;
+
+const siteAuthor = "Алексей Гетманец";
+const publicBaseUrl = "https://ialexey.ru";
+---
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <meta name="description" content={description}>
+    <meta name="robots" content="index, follow">
+    <link rel="icon" type="image/png" href="/avatar.png">
+    <link rel="canonical" href={canonicalUrl}>
+    <link rel="alternate" type="application/rss+xml" title={title} href="/feed.xml">
+    
+    <!-- Google Fonts: Montserrat (for headings) and Inter (for body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content={siteAuthor}>
+    <meta property="og:title" content={title}>
+    <meta property="og:description" content={description}>
+    <meta property="og:url" content={canonicalUrl}>
+    <meta property="og:image" content={`${publicBaseUrl}/avatar.png`}>
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content={title}>
+    <meta name="twitter:description" content={description}>
+    <meta name="twitter:image" content={`${publicBaseUrl}/avatar.png`}>
+
+    {schema && <script type="application/ld+json" set:html={schema}></script>}
+    
+    <style is:global>
+        :root {
+            --bg-color: #06080c; /* Deep black-blue Rozetked vibe */
+            --card-bg: #0d111a; /* Dark card color */
+            --text-main: #9fa6b5; /* Highly readable clean gray text */
+            --text-header: #ffffff;
+            --accent: #ff2a3b; /* Vibrant signature Rozetked red */
+            --accent-glow: rgba(255, 42, 59, 0.15);
+            --border: rgba(255, 255, 255, 0.05);
+            --border-hover: rgba(255, 42, 59, 0.25);
+            --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            --font-heading: 'Montserrat', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, .mono-text {
+            font-family: var(--font-heading);
+            color: var(--text-header);
+            letter-spacing: -0.5px;
+            font-weight: 700;
+        }
+
+        a {
+            color: var(--text-header);
+            text-decoration: none;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--accent);
+        }
+
+        .container {
+            max-width: 1100px; /* Wider container for premium grid */
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* HEADER */
+        .media-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2.5rem;
+        }
+
+        .logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-text {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #ffffff 60%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: rgba(255, 42, 59, 0.08);
+            padding: 2px 8px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 42, 59, 0.2);
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 8px var(--accent); }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        .social-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        /* BTN SOCIAL */
+        .btn-social {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            color: var(--text-main);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-social::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -32px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.9);
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-header);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-family: var(--font-mono);
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .btn-social:hover::after {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+
+        .btn-social:hover {
+            color: var(--text-header);
+            transform: translateY(-2px);
+            border-color: var(--text-header);
+        }
+
+        .btn-social svg {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.2s ease;
+        }
+
+        .btn-social:hover svg {
+            transform: scale(1.05);
+        }
+
+        /* Specific social hovers */
+        .btn-social.telegram:hover { border-color: #24A1DE; color: #24A1DE; background: rgba(36, 161, 222, 0.05); }
+        .btn-social.youtube:hover { border-color: #FF0000; color: #FF0000; background: rgba(255, 0, 0, 0.05); }
+        .btn-social.discord:hover { border-color: #5865F2; color: #5865F2; background: rgba(88, 101, 242, 0.05); }
+        .btn-social.twitter:hover { border-color: #ffffff; color: #ffffff; background: rgba(255, 255, 255, 0.05); }
+        .btn-social.twitch:hover { border-color: #9146FF; color: #9146FF; background: rgba(145, 70, 255, 0.05); }
+        .btn-social.github:hover { border-color: #ffffff; color: #ffffff; background: rgba(255, 255, 255, 0.05); }
+        .btn-social.email:hover { border-color: #3fb950; color: #3fb950; background: rgba(63, 185, 80, 0.05); }
+
+        .btn-social.more {
+            cursor: pointer;
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .social-more-container {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            overflow: hidden;
+            max-width: 0;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .social-more-container.active {
+            max-width: 300px;
+            opacity: 1;
+        }
+
+        .social-more-container .btn-social {
+            transform: translateX(-10px) scale(0.9);
+            opacity: 0;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .social-more-container.active .btn-social {
+            transform: translateX(0) scale(1);
+            opacity: 1;
+        }
+
+        .social-more-container.active .btn-social:nth-child(1) { transition-delay: 0.05s; }
+        .social-more-container.active .btn-social:nth-child(2) { transition-delay: 0.10s; }
+        .social-more-container.active .btn-social:nth-child(3) { transition-delay: 0.15s; }
+        .social-more-container.active .btn-social:nth-child(4) { transition-delay: 0.20s; }
+
+        /* GRID MEDIA SYSTEM */
+        .featured-card-wrap {
+            margin-bottom: 2.5rem;
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        /* GENERAL POST CARD */
+        .post-card {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s, box-shadow 0.25s;
+        }
+
+        .post-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--border-hover);
+            box-shadow: 0 12px 30px var(--accent-glow);
+        }
+
+        .post-card__img-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            background-color: #000;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .post-card__img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .post-card:hover .post-card__img {
+            transform: scale(1.04);
+        }
+
+        .post-card__content {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            padding: 1.5rem;
+        }
+
+        .post-card__meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .post-card__source {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: #6c7482;
+            text-transform: uppercase;
+        }
+
+        .post-card__date {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: #6c7482;
+        }
+
+        .post-card__title {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.35;
+            color: var(--text-header);
+            margin: 0 0 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: color 0.2s;
+        }
+
+        .post-card:hover .post-card__title {
+            color: var(--accent);
+        }
+
+        .post-card__desc {
+            font-size: 0.92rem;
+            color: var(--text-main);
+            margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.6;
+        }
+
+        /* SMART BADGES */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 3px 10px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .badge--leaks { background-color: #ff2a3b; color: #ffffff; }       /* Red */
+        .badge--ai { background-color: #00bcff; color: #000000; }          /* Blue */
+        .badge--neural { background-color: #bd00ff; color: #ffffff; }      /* Purple */
+        .badge--news { background-color: #00e676; color: #000000; }        /* Green */
+
+        /* FEATURED POST CARD (Rozetked Hero Card) */
+        .post-card--featured {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            min-height: 380px;
+        }
+
+        .post-card--featured .post-card__img-container {
+            height: 100%;
+            aspect-ratio: auto;
+            border-bottom: none;
+            border-right: 1px solid var(--border);
+        }
+
+        .post-card--featured .post-card__content {
+            padding: 2.25rem;
+            justify-content: center;
+        }
+
+        .post-card--featured .post-card__title {
+            font-size: 2rem;
+            line-height: 1.25;
+            margin-bottom: 1rem;
+            -webkit-line-clamp: 3;
+        }
+
+        .post-card--featured .post-card__desc {
+            font-size: 1.05rem;
+            line-height: 1.65;
+            -webkit-line-clamp: 4;
+        }
+
+        /* RESPONSIVE MEDIA GRID */
+        @media (max-width: 900px) {
+            .post-card--featured {
+                grid-template-columns: 1fr;
+            }
+            .post-card--featured .post-card__img-container {
+                aspect-ratio: 16 / 9;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            .post-card--featured .post-card__content {
+                padding: 1.5rem;
+            }
+            .post-card--featured .post-card__title {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .media-header {
+                flex-direction: column;
+                gap: 1rem;
+                padding-bottom: 1.25rem;
+                margin-bottom: 1.5rem;
+                align-items: flex-start;
+            }
+            .social-row {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .media-grid {
+                gap: 1.5rem;
+                margin-bottom: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Compact Media Header -->
+        <header class="media-header">
+            <div class="logo-wrap">
+                <a href="/" class="logo-text">iAlexey</a>
+                <div class="live-indicator">
+                    <div class="live-dot"></div>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            
+            <div class="social-row">
+                <a href="https://t.me/iAlexeyRu" class="btn-social telegram" target="_blank" rel="noopener noreferrer" aria-label="Telegram" data-tooltip="Telegram">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                </a>
+                <a href="https://youtube.com/@ialexeyru" class="btn-social youtube" target="_blank" rel="noopener noreferrer" aria-label="YouTube" data-tooltip="YouTube">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="https://discord.gg/Z7sSm56rcb" class="btn-social discord" target="_blank" rel="noopener noreferrer" aria-label="Discord" data-tooltip="Discord">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.873-.894.077.077 0 0 1-.008-.128c.126-.093.252-.19.372-.287a.075.075 0 0 1 .077-.011 13.925 13.925 0 0 0 10.95 0 .074.074 0 0 1 .078.01c.12.099.246.196.373.289a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.156-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.156 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.156-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.156 2.418z"/></svg>
+                </a>
+                
+                <button class="btn-social more" aria-label="Показать социальные сети" data-tooltip="Ещё...">...</button>
+                
+                <div class="social-more-container">
+                    <a href="https://x.com/iAlexeyRu" class="btn-social twitter" target="_blank" rel="noopener noreferrer" aria-label="Twitter" data-tooltip="Twitter">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    </a>
+                    <a href="https://twitch.tv/ialexeyru" class="btn-social twitch" target="_blank" rel="noopener noreferrer" aria-label="Twitch" data-tooltip="Twitch">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
+                    </a>
+                    <a href="https://github.com/iAlexeyRu" class="btn-social github" target="_blank" rel="noopener noreferrer" aria-label="GitHub" data-tooltip="GitHub">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
+                    </a>
+                    <a href="mailto:i@ialexey.ru" class="btn-social email" aria-label="Email" data-tooltip="Email">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <slot />
+        
+        <footer style="margin: 4rem 0 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem; text-align: center; font-size: 0.8rem; color: #5c626d; font-family: var(--font-mono);">
+            &copy; {new Date().getFullYear()} {siteAuthor}. Все права защищены.
+        </footer>
+    </div>
+    
+    <!-- Tracking and interaction logic -->
+    <script is:inline>
+    (() => {
+        const payload = JSON.stringify({ path: window.location.pathname || "/" });
+        try {
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon("/stats/pageview", new Blob([payload], { type: "application/json" }));
+                return;
+            }
+            fetch("/stats/pageview", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: payload,
+                keepalive: true,
+                credentials: "omit",
+                cache: "no-store"
+            });
+        } catch (_) {}
+    })();
+
+    // Expandable Social Bar Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const moreBtn = document.querySelector('.btn-social.more');
+        const container = document.querySelector('.social-more-container');
+        if (moreBtn && container) {
+            moreBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                moreBtn.classList.toggle('active');
+                container.classList.toggle('active');
+            });
+            
+            document.addEventListener('click', () => {
+                moreBtn.classList.remove('active');
+                container.classList.remove('active');
+            });
+            
+            container.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+    });
+    </script>
+</body>
+</html>

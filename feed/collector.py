@@ -984,31 +984,62 @@ def ensure_css(document):
     return document.replace("    </style>", css + "\n    </style>")
 
 
+def run_astro_build():
+    import subprocess
+    import sys
+    project_root = Path(os.environ.get("SOURCE_INDEX", "/home/deploy/repos/ialexey-web/index.html")).parent
+    
+    log(f"Запуск сборки Astro в директории: {project_root}")
+    env = os.environ.copy()
+    if sys.platform != "win32":
+        env["PATH"] = "/usr/bin:/usr/local/bin:/opt/homebrew/bin:" + env.get("PATH", "")
+        
+    try:
+        res = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            env=env
+        )
+        if res.returncode != 0:
+            log(f"Ошибка сборки Astro: {res.stderr}")
+            return False
+            
+        log("Сборка Astro успешно завершена.")
+        
+        dist_dir = project_root / "dist"
+        site_root = Path(os.environ.get("SITE_ROOT", "/home/deploy/ialexey-web"))
+        
+        if dist_dir.exists() and site_root.exists() and dist_dir.resolve() != site_root.resolve():
+            log(f"Синхронизация собранных файлов из {dist_dir} в {site_root}...")
+            sync_res = subprocess.run(
+                ["rsync", "-a", "--delete", "--exclude", "media", "--exclude", "stats", f"{dist_dir}/", f"{site_root}/"],
+                capture_output=True,
+                text=True
+            )
+            if sync_res.returncode == 0:
+                log("Синхронизация завершена успешно.")
+            else:
+                log(f"Ошибка синхронизации: {sync_res.stderr}")
+        return True
+    except Exception as exc:
+        log(f"Исключение при сборке Astro: {exc}")
+        return False
+
+
 def render_site(items=None):
     items = items if items is not None else load_feed()
-    source_index = SOURCE_INDEX if SOURCE_INDEX.exists() else SITE_INDEX
-    document = source_index.read_text(encoding="utf-8")
-    document = ensure_head_meta(document, items)
-    document = ensure_css(document)
-    section = feed_section(items)
-    if SECTION_START in document and SECTION_END in document:
-        document = re.sub(
-            re.escape(SECTION_START) + r".*?" + re.escape(SECTION_END),
-            section,
-            document,
-            flags=re.S,
-        )
-    else:
-        marker = "    <!-- REVIEWS -->"
-        if marker in document:
-            document = document.replace(marker, section + "\n\n" + marker, 1)
-        elif "</div>\n\n<script>" in document:
-            document = document.replace("</div>\n\n<script>", section + "\n\n</div>\n\n<script>", 1)
-        else:
-            document = document.replace("</div>\n\n</body>", section + "\n\n</div>\n\n</body>", 1)
-    atomic_write(SITE_INDEX, document, permissions=0o664)
-    render_static_outputs(items)
-    log(f"Сайт обновлен: {SITE_INDEX}")
+    publish_public_feed()
+    run_astro_build()
+    
+    # Пинг поисковых систем через IndexNow
+    try:
+        urls = [site_url("/"), site_url("/feed.xml"), site_url("/llms.txt"), *[site_url(post_path(item)) for item in items]]
+        ping_indexnow(urls)
+    except Exception as exc:
+        log(f"Ошибка IndexNow: {exc}")
+
 
 
 def telegram_api(method, payload=None):

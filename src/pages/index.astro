@@ -1,0 +1,230 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../layouts/Layout.astro';
+
+// Configuration
+const channelUsername = "iAlexeyRu";
+const siteAuthor = "Алексей Гетманец";
+const siteTitle = "Алексей Гетманец | Сливы и новости ИИ";
+const siteDescription = "Сливы и новости ИИ от Алексея Гетманца: короткая Telegram-лента, RSS и статические страницы постов.";
+
+// Load feed items
+const dataDir = process.env.DATA_DIR || '/home/deploy/ialexey-feed/data';
+const prodFeedJsonPath = path.join(dataDir, 'feed.json');
+const localFeedJsonPath = path.resolve('src/data/feed.json');
+
+let parsedData = null;
+
+if (fs.existsSync(prodFeedJsonPath)) {
+  try {
+    parsedData = JSON.parse(fs.readFileSync(prodFeedJsonPath, 'utf-8'));
+  } catch (e) {
+    console.error(`Error reading production feed.json:`, e);
+  }
+}
+
+if (!parsedData && fs.existsSync(localFeedJsonPath)) {
+  try {
+    parsedData = JSON.parse(fs.readFileSync(localFeedJsonPath, 'utf-8'));
+  } catch (e) {
+    console.error(`Error reading local feed.json:`, e);
+  }
+}
+
+// Support both array structure and object wrapping structure
+let feedItems = [];
+if (parsedData) {
+  if (Array.isArray(parsedData)) {
+    feedItems = parsedData;
+  } else if (parsedData.items && Array.isArray(parsedData.items)) {
+    feedItems = parsedData.items;
+  }
+}
+
+// Sort items by date descending
+const sortedItems = feedItems
+  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+// Format date helper matching Europe/Moscow timezone format: DD.MM.YYYY HH:MM
+function formatDate(value: string) {
+  if (!value) return "";
+  try {
+    const date = new Date(value);
+    const formatter = new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Europe/Moscow",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return formatter.format(date).replace(",", "");
+  } catch (e) {
+    return value;
+  }
+}
+
+// Post path helper
+function getPostPath(item: any) {
+  const messageId = item.message_id || item.id.split(':').pop();
+  return `/posts/${messageId}/`;
+}
+
+// Title truncation helper
+function cleanText(text: string) {
+  return (text || "").replace(/\n{3,}/g, "\n\n").trim();
+}
+function compactText(text: string) {
+  return cleanText(text).replace(/\s+/g, " ").trim();
+}
+function truncateText(value: string, limit: number) {
+  const text = compactText(value);
+  if (text.length <= limit) {
+    return text;
+  }
+  return text.slice(0, Math.max(0, limit - 1)).trimEnd() + "…";
+}
+
+// Smart classification of category badges
+function getSmartBadge(text: string) {
+  const t = (text || "").toLowerCase();
+  if (t.includes("слив") || t.includes("утек") || t.includes("секрет") || t.includes("leak") || t.includes("эксклюзив")) {
+    return { label: "Сливы", class: "badge--leaks" };
+  }
+  if (t.includes("gpt") || t.includes("gemini") || t.includes("claude") || t.includes("anthropic") || t.includes("openai") || t.includes("google") || t.includes("llama")) {
+    return { label: "ИИ-Модели", class: "badge--ai" };
+  }
+  if (t.includes("нейросеть") || t.includes("midjourney") || t.includes("sora") || t.includes("генераци") || t.includes("искусствен")) {
+    return { label: "Нейросети", class: "badge--neural" };
+  }
+  return { label: "Новости", class: "badge--news" };
+}
+
+// Schema.org dynamic markup
+const schemaObject = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "https://ialexey.ru/#person",
+      "name": siteAuthor,
+      "url": "https://ialexey.ru/",
+      "image": "https://ialexey.ru/avatar.png",
+      "sameAs": [
+        `https://t.me/${channelUsername}`,
+        "https://x.com/iAlexeyRu"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://ialexey.ru/#website",
+      "url": "https://ialexey.ru/",
+      "name": siteTitle,
+      "description": siteDescription,
+      "inLanguage": "ru-RU",
+      "publisher": { "@id": "https://ialexey.ru/#person" }
+    },
+    ...(sortedItems.length > 0 ? [{
+      "@type": "ItemList",
+      "@id": "https://ialexey.ru/#telegram-feed",
+      "name": "Последние посты Telegram",
+      "itemListElement": sortedItems.map((item, idx) => ({
+        "@type": "ListItem",
+        "position": idx + 1,
+        "url": `https://ialexey.ru${getPostPath(item)}`,
+        "name": truncateText(item.text || "", 60)
+      }))
+    }] : [])
+  ]
+};
+
+const schema = JSON.stringify(schemaObject);
+
+// Separate the first post as the Featured Hero Post
+const featuredItem = sortedItems.length > 0 ? sortedItems[0] : null;
+const gridItems = sortedItems.length > 1 ? sortedItems.slice(1) : [];
+---
+<Layout title={siteTitle} description={siteDescription} schema={schema}>
+  
+  {featuredItem ? (
+      <!-- 1. FEATURED HERO POST (Rozetked style) -->
+      <div class="featured-card-wrap">
+          {(() => {
+              const badge = getSmartBadge(featuredItem.text);
+              const dateStr = formatDate(featuredItem.date);
+              const title = truncateText(featuredItem.text || "", 120) || `Пост Telegram ${featuredItem.message_id}`;
+              const desc = featuredItem.text || "";
+              const postUrl = getPostPath(featuredItem);
+              
+              return (
+                  <a href={postUrl} class="post-card post-card--featured">
+                      <div class="post-card__img-container">
+                          {featuredItem.image ? (
+                              <img 
+                                  src={`/${featuredItem.image}`} 
+                                  class="post-card__img" 
+                                  alt="Главная новость" 
+                                  loading="eager"
+                              />
+                          ) : (
+                              <!-- Sleek Rozetked-style fallback gradient -->
+                              <div class="post-card__img" style="background: linear-gradient(135deg, #ff2a3b 0%, #bd00ff 100%); height: 100%; width: 100%;"></div>
+                          )}
+                      </div>
+                      <div class="post-card__content">
+                          <div class="post-card__meta-row">
+                              <span class={`badge ${badge.class}`}>{badge.label}</span>
+                              <span class="post-card__date">{dateStr} MSK</span>
+                          </div>
+                          <h2 class="post-card__title">{title}</h2>
+                          <p class="post-card__desc">{desc}</p>
+                      </div>
+                  </a>
+              );
+          })()}
+      </div>
+  ) : (
+      <div class="telegram-feed__empty" style="text-align: center; padding: 3rem; margin-bottom: 3rem;">
+          Лента постов пока пуста. Новые посты появятся здесь автоматически!
+      </div>
+  )}
+
+  {gridItems.length > 0 && (
+      <!-- 2. OTHER POSTS GRID (Meduza / Rozetked style) -->
+      <section class="media-grid">
+          {gridItems.map((item) => {
+              const badge = getSmartBadge(item.text);
+              const dateStr = formatDate(item.date);
+              const title = truncateText(item.text || "", 86) || `Пост Telegram ${item.message_id}`;
+              const desc = item.text || "";
+              const postUrl = getPostPath(item);
+              
+              return (
+                  <a href={postUrl} class="post-card">
+                      {item.image && (
+                          <div class="post-card__img-container">
+                              <img 
+                                  src={`/${item.image}`} 
+                                  class="post-card__img" 
+                                  alt="Новость" 
+                                  loading="lazy"
+                              />
+                          </div>
+                      )}
+                      <div class="post-card__content">
+                          <div class="post-card__meta-row">
+                              <span class={`badge ${badge.class}`}>{badge.label}</span>
+                              <span class="post-card__date">{dateStr} MSK</span>
+                          </div>
+                          <h3 class="post-card__title">{title}</h3>
+                          <p class="post-card__desc">{desc}</p>
+                      </div>
+                  </a>
+              );
+          })}
+      </section>
+  )}
+
+</Layout>

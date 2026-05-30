@@ -8,14 +8,25 @@ __pycache__/
 Thumbs.db
 
 # Feed Application dynamic files and secrets
-feed/ialexey-feed.env
-feed/data/
+/feed/ialexey-feed.env
+/feed/data/
 
-# Local static files that are generated dynamically on server
-feed.json
-feed.xml
-sitemap.xml
-robots.txt
-llms.txt
-posts/
-media/
+# Local static files that are generated dynamically on server (root only)
+/feed.json
+/feed.xml
+/sitemap.xml
+/robots.txt
+/llms.txt
+/posts/
+/media/
+
+# Astro and Node.js
+node_modules/
+dist/
+.astro/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env
+.env.production
