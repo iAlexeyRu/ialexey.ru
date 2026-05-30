@@ -227,7 +227,7 @@ const mainFeaturedItems = sortedItems.slice(0, 5);
 const articleItems = sortedItems.filter(item => item.image || item.text.length > 80);
 
 // 3. "Лента всех новостей" (Full list for the sidebar, aligned with mainFeaturedItems height)
-const sidebarItems = sortedItems.slice(0, 10);
+const sidebarItems = sortedItems;
 ---
 <Layout title={siteTitle} description={siteDescription} schema={schema}>
 
@@ -340,18 +340,28 @@ const sidebarItems = sortedItems.slice(0, 10);
               </div>
               
               <div class="sidebar-list">
-                  {sidebarItems.map((item) => {
+                  {sidebarItems.map((item, index) => {
                       const timeStr = formatTimeOnly(item.date);
                       const title = truncateText(item.text || "", 120) || `Обновление ленты ${item.message_id}`;
                       const postUrl = getPostPath(item);
+                      const isHidden = index >= 10;
                       return (
-                          <a href={postUrl} class="sidebar-item">
+                          <a href={postUrl} class={`sidebar-item ${isHidden ? 'sidebar-item--hidden' : ''}`}>
                               <span class="sidebar-item-time">{timeStr}</span>
                               <span class="sidebar-item-text">{title}</span>
                           </a>
                       );
                   })}
               </div>
+
+              {sidebarItems.length > 10 && (
+                  <div class="sidebar-show-more-wrap">
+                      <button id="sidebar-show-more-btn" class="sidebar-show-more-btn">
+                          <span>Показать все</span>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-show-more-btn__icon"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                  </div>
+              )}
           </aside>
       )}
 
@@ -386,10 +396,10 @@ const sidebarItems = sortedItems.slice(0, 10);
       font-size: 1.15rem;
       margin: 0 0 0.85rem;
       font-family: var(--font-heading);
-      font-weight: 800;
+      font-weight: 700;
       color: var(--text-header);
       text-transform: uppercase;
-      letter-spacing: -0.5px;
+      letter-spacing: 0.02em;
       border-left: 3px solid var(--accent);
       padding-left: 0.6rem;
   }
@@ -404,7 +414,7 @@ const sidebarItems = sortedItems.slice(0, 10);
       align-items: center;
       gap: 0.75rem;
       padding: 0.4rem 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid var(--border-soft);
       transition: all 0.2s ease;
   }
 
@@ -420,16 +430,16 @@ const sidebarItems = sortedItems.slice(0, 10);
   .featured-item-time {
       font-family: var(--font-mono);
       font-size: 0.78rem;
-      color: #6c7482;
+      color: var(--text-muted);
       flex: 0 0 42px;
-      font-weight: 500;
+      font-weight: 400;
   }
 
   .featured-item-text {
       font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--text-header);
-      line-height: 1.2;
+      font-weight: 500;
+      color: var(--text-main);
+      line-height: 1.4;
       white-space: nowrap; /* Strictly single line */
       text-overflow: ellipsis; /* Appends ... */
       overflow: hidden; /* Hides overflow */
@@ -519,7 +529,7 @@ const sidebarItems = sortedItems.slice(0, 10);
 
   .toggle-stream-btn:hover {
       color: var(--text-header);
-      background-color: rgba(255, 255, 255, 0.04);
+      background-color: var(--border-soft);
   }
 
   .toggle-icon {
@@ -679,8 +689,9 @@ const sidebarItems = sortedItems.slice(0, 10);
       font-size: 1.5rem;
       margin: 0 0 1.5rem;
       font-family: var(--font-heading);
-      font-weight: 800;
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.02em;
       border-left: 3px solid var(--accent);
       padding-left: 0.75rem;
       color: var(--text-header);
@@ -696,7 +707,7 @@ const sidebarItems = sortedItems.slice(0, 10);
       display: flex;
       gap: 1.5rem;
       padding-bottom: 1.75rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid var(--border-soft);
       transition: all 0.25s ease;
   }
 
@@ -729,7 +740,7 @@ const sidebarItems = sortedItems.slice(0, 10);
   .article-row__placeholder-img {
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #111521 0%, #06080c 100%);
+      background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-color) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -776,7 +787,7 @@ const sidebarItems = sortedItems.slice(0, 10);
   .article-row__desc {
       font-size: 0.9rem;
       line-height: 1.5;
-      color: var(--text-main);
+      color: var(--text-secondary);
       margin: 0 0 0.75rem;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -793,7 +804,7 @@ const sidebarItems = sortedItems.slice(0, 10);
   .article-row__date {
       font-family: var(--font-mono);
       font-size: 0.72rem;
-      color: #6c7482;
+      color: var(--text-muted);
   }
 
   @media (max-width: 600px) {
@@ -811,12 +822,12 @@ const sidebarItems = sortedItems.slice(0, 10);
   .sidebar-col {
       display: flex;
       flex-direction: column;
-      border-left: 1px solid var(--border);
-      padding-left: 1.5rem;
-      position: sticky;
-      top: 1.5rem;
-      align-self: start;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 0.9rem 1.15rem;
       min-width: 0; /* Allow clean resizing */
+      height: fit-content;
   }
 
   .sidebar-header {
@@ -829,10 +840,10 @@ const sidebarItems = sortedItems.slice(0, 10);
       font-size: 1.1rem;
       margin: 0;
       font-family: var(--font-heading);
-      font-weight: 800;
+      font-weight: 700;
       color: var(--text-header);
       text-transform: uppercase;
-      letter-spacing: -0.5px;
+      letter-spacing: 0.02em;
   }
 
   .sidebar-list {
@@ -844,8 +855,8 @@ const sidebarItems = sortedItems.slice(0, 10);
       display: flex;
       align-items: flex-start;
       gap: 0.75rem;
-      padding: 0.6rem 0;
-      border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+      padding: 14px 0;
+      border-bottom: 1px dashed var(--border-dashed);
       transition: all 0.2s ease;
   }
 
@@ -856,30 +867,82 @@ const sidebarItems = sortedItems.slice(0, 10);
   .sidebar-item-time {
       font-family: var(--font-mono);
       font-size: 0.78rem;
-      color: var(--accent);
+      color: var(--text-muted);
       flex: 0 0 42px;
-      font-weight: 600;
+      font-weight: 400;
       margin-top: 0.15rem; /* Align perfectly with first line of text */
   }
 
   .sidebar-item-text {
-      font-size: 0.88rem;
-      line-height: 1.4;
+      font-size: 0.9rem;
+      line-height: 1.45;
       color: var(--text-main);
-      font-weight: 400;
+      font-weight: 500;
       flex-grow: 1;
       display: -webkit-box;
-      -webkit-line-clamp: 2;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
   }
 
   .sidebar-item:hover .sidebar-item-text {
-      color: var(--text-header);
+      color: var(--accent);
   }
 
   .sidebar-item:hover {
       transform: translateX(4px);
+  }
+
+  .sidebar-item--hidden {
+      display: none !important;
+  }
+
+  .sidebar-list--expanded .sidebar-item--hidden {
+      display: flex !important;
+      animation: fadeIn 0.4s ease forwards;
+  }
+
+  .sidebar-show-more-wrap {
+      display: flex;
+      justify-content: center;
+      margin-top: 1.25rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border-soft);
+  }
+
+  .sidebar-show-more-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background-color: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-header);
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+      font-family: var(--font-heading);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+  }
+
+  .sidebar-show-more-btn:hover {
+      background-color: var(--accent-glow);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 4px 12px var(--accent-glow);
+  }
+
+  .sidebar-show-more-btn__icon {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.25s ease;
+  }
+
+  .sidebar-show-more-btn:hover .sidebar-show-more-btn__icon {
+      transform: translateY(2px);
   }
 
   .article-row--hidden {
@@ -921,10 +984,10 @@ const sidebarItems = sortedItems.slice(0, 10);
   }
 
   .show-more-btn:hover {
-      background-color: rgba(255, 42, 59, 0.05);
+      background-color: var(--accent-glow);
       border-color: var(--accent);
       color: var(--accent);
-      box-shadow: 0 4px 15px rgba(255, 42, 59, 0.15);
+      box-shadow: 0 4px 15px var(--accent-glow);
   }
 
   .show-more-btn__icon {
@@ -943,14 +1006,6 @@ const sidebarItems = sortedItems.slice(0, 10);
           grid-template-columns: 1fr;
           gap: 1.5rem;
       }
-      .sidebar-col {
-          border-left: none;
-          padding-left: 0;
-          border-top: 1px solid var(--border);
-          padding-top: 1.5rem;
-          position: relative;
-          top: 0;
-      }
   }
 </style>
 
@@ -962,6 +1017,16 @@ const sidebarItems = sortedItems.slice(0, 10);
       showMoreBtn.addEventListener('click', () => {
           articlesList.classList.add('articles-list--expanded');
           showMoreBtn.style.display = 'none';
+      });
+  }
+
+  // Sidebar News Expander
+  const sidebarShowMoreBtn = document.getElementById('sidebar-show-more-btn');
+  const sidebarList = document.querySelector('.sidebar-list');
+  if (sidebarShowMoreBtn && sidebarList) {
+      sidebarShowMoreBtn.addEventListener('click', () => {
+          sidebarList.classList.add('sidebar-list--expanded');
+          sidebarShowMoreBtn.closest('.sidebar-show-more-wrap').style.display = 'none';
       });
   }
 

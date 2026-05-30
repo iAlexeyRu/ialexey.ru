@@ -230,12 +230,12 @@ const schema = JSON.stringify(schemaObject);
       gap: 0.6rem;
       font-family: var(--font-mono);
       font-size: 0.8rem;
-      color: #6c7482;
+      color: var(--text-muted);
   }
 
   .tg-source {
-      color: #6c7482;
-      border-bottom: 1px dashed rgba(255,255,255,0.15);
+      color: var(--text-muted);
+      border-bottom: 1px dashed var(--border-dashed);
   }
 
   .tg-source:hover {
@@ -244,7 +244,7 @@ const schema = JSON.stringify(schemaObject);
   }
 
   .meta-dot {
-      color: rgba(255,255,255,0.15);
+      color: var(--meta-dot);
   }
 
   .article-title {
@@ -279,7 +279,7 @@ const schema = JSON.stringify(schemaObject);
 
   .article-body :global(a) {
       color: var(--accent);
-      border-bottom: 1px solid rgba(255, 42, 59, 0.3);
+      border-bottom: 1px solid var(--accent-glow);
   }
 
   .article-body :global(a:hover) {
