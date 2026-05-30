@@ -1,0 +1,25 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://ialexey.ru/",
+      "service-desc": [
+        {
+          "href": "https://ialexey.ru/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://ialexey.ru/llms.txt",
+          "type": "text/plain"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://ialexey.ru/tg-feed/healthz",
+          "type": "text/plain"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "read-feed",
+      "description": "Read the latest neural network and AI leaks and news posts from Алексей Гетманец's Telegram feed.",
+      "url": "/.well-known/agent-skills/read-feed/SKILL.md",
+      "digest": "sha256:3b38642141b16daaaeb622a82d86cb303c2f03dd183e2beaa14773a4bd3a46b7"
+    }
+  ]
+}

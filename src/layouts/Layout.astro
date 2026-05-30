@@ -27,6 +27,8 @@ const publicBaseUrl = "https://ialexey.ru";
     <link rel="icon" type="image/png" href="/avatar.png">
     <link rel="canonical" href={canonicalUrl}>
     <link rel="alternate" type="application/rss+xml" title={title} href="/feed.xml">
+    <link rel="api-catalog" type="application/linkset+json" href="/.well-known/api-catalog">
+    <link rel="agent-skills" type="application/json" href="/.well-known/agent-skills/index.json">
     
     <!-- Google Fonts: Montserrat (for headings) and Inter (for body) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -744,6 +746,76 @@ const publicBaseUrl = "https://ialexey.ru";
             }
         }
     </style>
+    <!-- WebMCP tools registration for AI agents -->
+    <script is:inline>
+      (() => {
+        const registerWebMCP = async () => {
+          if (typeof navigator !== 'undefined' && navigator.modelContext) {
+            try {
+              const provideContext = navigator.modelContext.provideContext || navigator.modelContext.registerTool;
+              if (typeof provideContext === 'function') {
+                if (navigator.modelContext.provideContext) {
+                  await navigator.modelContext.provideContext({
+                    tools: [
+                      {
+                        name: 'read_feed',
+                        description: 'Get the latest AI news and leaks from the Telegram feed of Алексей Гетманец.',
+                        inputSchema: {
+                          type: 'object',
+                          properties: {
+                            limit: { type: 'number', description: 'Number of posts to return (default 5, max 12)' }
+                          }
+                        },
+                        execute: async (args) => {
+                          try {
+                            const res = await fetch('/feed.json');
+                            const data = await res.json();
+                            const items = data.items || data;
+                            return {
+                              result: items.slice(0, args.limit || 5)
+                            };
+                          } catch (e) {
+                            return { error: e.message };
+                          }
+                        }
+                      }
+                    ]
+                  });
+                  console.log('WebMCP registered successfully using provideContext');
+                } else if (navigator.modelContext.registerTool) {
+                  await navigator.modelContext.registerTool({
+                    name: 'read_feed',
+                    description: 'Get the latest AI news and leaks from the Telegram feed of Алексей Гетманец.',
+                    inputSchema: {
+                      type: 'object',
+                      properties: {
+                        limit: { type: 'number', description: 'Number of posts to return (default 5, max 12)' }
+                      }
+                    }
+                  }, async (args) => {
+                    try {
+                      const res = await fetch('/feed.json');
+                      const data = await res.json();
+                      const items = data.items || data;
+                      return {
+                        result: items.slice(0, args.limit || 5)
+                      };
+                    } catch (e) {
+                      return { error: e.message };
+                    }
+                  });
+                  console.log('WebMCP registered successfully using registerTool');
+                }
+              }
+            } catch (err) {
+              console.error('Failed to register WebMCP:', err);
+            }
+          }
+        };
+        registerWebMCP();
+        document.addEventListener('DOMContentLoaded', registerWebMCP);
+      })();
+    </script>
 </head>
 <body>
     <!-- Navigation Overlay -->

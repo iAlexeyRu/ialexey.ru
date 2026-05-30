@@ -1,0 +1,9 @@
+{
+  "resource": "https://ialexey.ru",
+  "authorization_servers": [
+    "https://ialexey.ru"
+  ],
+  "scopes_supported": [
+    "read:feed"
+  ]
+}

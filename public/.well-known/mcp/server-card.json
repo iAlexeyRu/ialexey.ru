@@ -1,0 +1,26 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/server-card/v1.0",
+  "version": "1.0",
+  "protocolVersion": "2025-06-18",
+  "serverInfo": {
+    "name": "ialexey-feed-mcp",
+    "version": "1.0.0"
+  },
+  "description": "MCP server exposing Telegram feed items and analytics for ialexey.ru",
+  "transport": {
+    "type": "streamable-http",
+    "endpoint": "/feed.json"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    },
+    "resources": {
+      "subscribe": true,
+      "listChanged": true
+    }
+  },
+  "authentication": {
+    "required": false
+  }
+}
