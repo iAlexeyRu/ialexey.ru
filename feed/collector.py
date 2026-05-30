@@ -1014,7 +1014,7 @@ def run_astro_build():
         if dist_dir.exists() and site_root.exists() and dist_dir.resolve() != site_root.resolve():
             log(f"Синхронизация собранных файлов из {dist_dir} в {site_root}...")
             sync_res = subprocess.run(
-                ["rsync", "-a", "--delete", "--exclude", "media", "--exclude", "stats", f"{dist_dir}/", f"{site_root}/"],
+                ["rsync", "-a", "--delete", "--exclude", "media", "--exclude", "stats", "--exclude", "feed", "--exclude", "bin", f"{dist_dir}/", f"{site_root}/"],
                 capture_output=True,
                 text=True
             )
