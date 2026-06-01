@@ -449,7 +449,7 @@ const sidebarItems = sortedItems.map(item => {
 
     <div class="page-layout-grid">
       
-      <!-- ROW 1 LEFT: ГЛАВНЫЕ НОВОСТИ -->
+      <!-- LEFT COLUMN: ГЛАВНОЕ + СТАТЬИ -->
       <div class="main-content-col">
           <!-- BLOCK 1: ГЛАВНЫЕ НОВОСТИ (Premium article row layout without images) -->
           {mainFeaturedItems.length > 0 && (
@@ -478,59 +478,56 @@ const sidebarItems = sortedItems.map(item => {
                   </div>
               </div>
           )}
-      </div>
 
-      <!-- ROW 1 RIGHT: СТРИМ МОЙ -->
-      {sidebarItems.length > 0 && (
-          <aside class="sidebar-col">
-              <StreamBanner youtubeId={latestCompletedVideoId} />
-          </aside>
-      )}
+          <!-- BLOCK 2: СТАТЬИ -->
+          <section class="articles-section" id="articles">
+              <h2 class="section-title">Статьи</h2>
+              {articleItems.length === 0 ? (
+                  <div class="telegram-feed__empty" style="padding: 3rem; text-align: center;">Постов пока нет. Новые посты появятся здесь автоматически!</div>
+              ) : (
+                  <div class="articles-list">
+                      {articleItems.map((item, index) => (
+                          <ArticleRow item={item} index={index} />
+                      ))}
+                  </div>
+              )}
 
-      <!-- ROW 2 LEFT: СТАТЬИ -->
-      <section class="articles-section" id="articles">
-          <h2 class="section-title">Статьи</h2>
-          {articleItems.length === 0 ? (
-              <div class="telegram-feed__empty" style="padding: 3rem; text-align: center;">Постов пока нет. Новые посты появятся здесь автоматически!</div>
-          ) : (
-              <div class="articles-list">
-                  {articleItems.map((item, index) => (
-                      <ArticleRow item={item} index={index} />
-                  ))}
-              </div>
-          )}
-
-          {articleItems.length > 5 && (
-              <div class="articles-show-more-wrap">
-                  <button id="show-more-btn" class="show-more-btn">
-                      <span>Смотреть все</span>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="show-more-btn__icon"><path d="m6 9 6 6 6-6"/></svg>
-                  </button>
-              </div>
-          )}
-      </section>
-
-      <!-- ROW 2 RIGHT: ВСЕ НОВОСТИ -->
-      {sidebarItems.length > 0 && (
-          <aside class="sidebar-col" id="news">
-              <div class="sidebar-header" style="margin-top: 0;">
-                  <h2 class="sidebar-main-title">Лента</h2>
-              </div>
-              
-              <div class="sidebar-list">
-                  {sidebarItems.map((item, index) => (
-                      <SidebarItem item={item} index={index} />
-                  ))}
-              </div>
-
-              {sidebarItems.length > 10 && (
-                  <div class="sidebar-show-more-wrap">
-                      <button id="sidebar-show-more-btn" class="sidebar-show-more-btn">
-                          <span>Показать все</span>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-show-more-btn__icon"><path d="m6 9 6 6 6-6"/></svg>
+              {articleItems.length > 5 && (
+                  <div class="articles-show-more-wrap">
+                      <button id="show-more-btn" class="show-more-btn">
+                          <span>Смотреть все</span>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="show-more-btn__icon"><path d="m6 9 6 6 6-6"/></svg>
                       </button>
                   </div>
               )}
+          </section>
+      </div>
+
+      <!-- RIGHT COLUMN: ВИДЕО + ЛЕНТА -->
+      {sidebarItems.length > 0 && (
+          <aside class="sidebar-col">
+              <StreamBanner youtubeId={latestCompletedVideoId} />
+
+              <div class="sidebar-news-section" id="news">
+                  <div class="sidebar-header">
+                      <h2 class="sidebar-main-title">Лента</h2>
+                  </div>
+                  
+                  <div class="sidebar-list">
+                      {sidebarItems.map((item, index) => (
+                          <SidebarItem item={item} index={index} />
+                      ))}
+                  </div>
+
+                  {sidebarItems.length > 10 && (
+                      <div class="sidebar-show-more-wrap">
+                          <button id="sidebar-show-more-btn" class="sidebar-show-more-btn">
+                              <span>Показать все</span>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-show-more-btn__icon"><path d="m6 9 6 6 6-6"/></svg>
+                          </button>
+                      </div>
+                  )}
+              </div>
           </aside>
       )}
   </div>
@@ -565,7 +562,7 @@ const sidebarItems = sortedItems.map(item => {
   .main-content-col {
       display: flex;
       flex-direction: column;
-      gap: 2.5rem;
+      gap: 1.5rem;
       min-width: 0; /* Prevent flex/nowrap children from expanding column */
   }
 
@@ -677,6 +674,7 @@ const sidebarItems = sortedItems.map(item => {
   .sidebar-col {
       display: flex;
       flex-direction: column;
+      gap: 1.75rem;
       background-color: transparent;
       border: none;
       padding: 0;
@@ -685,8 +683,8 @@ const sidebarItems = sortedItems.map(item => {
   }
 
   .sidebar-header {
-      margin-top: 2.25rem;
-      margin-bottom: 1.25rem;
+      margin-top: 0;
+      margin-bottom: 1rem;
   }
 
   .sidebar-main-title {

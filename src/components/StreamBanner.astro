@@ -8,46 +8,30 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
 ---
 
 <div class="stream-banner" id="stream-block" data-youtube-id={youtubeId}>
-    <div class="stream-header-row">
-        <div class="stream-title-wrap">
-            <span class="stream-status-dot offline" id="stream-status-dot"></span>
-            <span class="stream-status-text" id="stream-status-text">Видео</span>
-        </div>
-        <button id="toggle-stream-btn" class="toggle-stream-btn" aria-label="Свернуть блок">
-            <span class="toggle-text">Свернуть</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-icon"><path d="m18 15-6-6-6 6"/></svg>
-        </button>
-    </div>
-    <div class="stream-body-collapsible" id="stream-body-collapsible">
-        <div class="stream-embed-container" id="stream-embed-container">
-            <div class="stream-lazy-cover youtube-cover" id="stream-play-trigger">
-                <img
-                    src={youtubeThumbnailUrl}
-                    alt="Запустить видео"
-                    class="stream-cover-img"
-                    width="640"
-                    height="360"
-                    loading="eager"
-                    decoding="async"
-                    fetchpriority="high"
-                />
-                <div class="cover-overlay"></div>
-                <div class="play-btn-circle yt-red-btn">
-                    <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon-svg"><path d="M8 5v14l11-7z"/></svg>
-                </div>
-                <span class="cover-label">Запустить видео</span>
+    <div class="stream-embed-container" id="stream-embed-container">
+        <div class="stream-lazy-cover youtube-cover" id="stream-play-trigger">
+            <img
+                src={youtubeThumbnailUrl}
+                alt="Запустить видео"
+                class="stream-cover-img"
+                width="640"
+                height="360"
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
+            />
+            <div class="cover-overlay"></div>
+            <div class="play-btn-circle yt-red-btn">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon-svg"><path d="M8 5v14l11-7z"/></svg>
             </div>
+            <span class="cover-label">Запустить видео</span>
         </div>
     </div>
 </div>
 
 <script>
   const streamBlock = document.getElementById('stream-block');
-  const statusDot = document.getElementById('stream-status-dot');
-  const statusText = document.getElementById('stream-status-text');
   const embedContainer = document.getElementById('stream-embed-container');
-  const toggleBtn = document.getElementById('toggle-stream-btn');
-  const toggleText = toggleBtn?.querySelector('.toggle-text');
   const youtubeId = streamBlock?.getAttribute('data-youtube-id') || 'e-RHZvID8q8';
 
   function buildYoutubeCover(videoId) {
@@ -85,15 +69,6 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
     });
   }
 
-  function showYoutubeOffline(videoId) {
-    if (!embedContainer) return;
-    statusDot?.classList.add('offline');
-    if (statusText) statusText.textContent = 'Видео';
-    streamBlock?.classList.add('offline-border');
-    embedContainer.innerHTML = buildYoutubeCover(videoId);
-    attachYoutubeClick(videoId);
-  }
-
   function checkLiveStatus() {
       if (!streamBlock || !embedContainer) return;
       fetch('https://decapi.me/twitch/uptime/ialexeyru')
@@ -101,9 +76,6 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
           .then(text => {
               const isLive = !text.toLowerCase().includes('offline');
               if (isLive) {
-                  statusDot?.classList.remove('offline');
-                  statusDot?.classList.add('live');
-                  if (statusText) statusText.textContent = 'LIVE: Трансляция на Twitch';
                   streamBlock.classList.remove('offline-border');
                   streamBlock.classList.add('live-border');
                   
@@ -127,8 +99,6 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
                       `;
                   });
               } else {
-                  statusDot?.classList.add('offline');
-                  if (statusText) statusText.textContent = 'Видео';
                   streamBlock.classList.add('offline-border');
               }
           })
@@ -138,13 +108,6 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
   if (streamBlock && embedContainer) {
       attachYoutubeClick(youtubeId);
 
-      if (toggleBtn && toggleText) {
-          toggleBtn.addEventListener('click', () => {
-              const isCollapsed = streamBlock.classList.toggle('stream-banner--collapsed');
-              toggleText.textContent = isCollapsed ? 'Развернуть' : 'Свернуть';
-          });
-      }
-
       window.addEventListener('load', () => {
           window.setTimeout(checkLiveStatus, 1200);
       }, { once: true });
@@ -153,159 +116,34 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
 
 <style>
   .stream-banner {
-      background: linear-gradient(135deg, rgba(25, 20, 36, 0.6) 0%, rgba(13, 17, 26, 0.8) 100%);
-      border: 1px solid rgba(145, 70, 255, 0.2);
-      border-radius: 16px;
-      padding: 0.9rem 1.15rem;
       position: relative;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(145, 70, 255, 0.05);
-      transition: all 0.3s ease;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .stream-header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-      transition: margin 0.3s ease;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-  }
-
-  .stream-banner--collapsed .stream-header-row {
-      margin-bottom: 0;
-  }
-
-  .stream-title-wrap {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-  }
-
-  .stream-status-dot {
-      width: 8px;
-      height: 8px;
-      background-color: #6c7482;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-  }
-
-  .stream-status-dot.live {
-      background-color: #F04465; /* Match --accent */
-      box-shadow: 0 0 10px #F04465;
-      animation: streamPulse 1.8s infinite;
-  }
-
-  @keyframes streamPulse {
-      0% { transform: scale(0.9); opacity: 0.6; }
-      50% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(0.9); opacity: 0.6; }
-  }
-
-  .stream-status-dot.offline {
-      background-color: #ff0055;
-      box-shadow: 0 0 8px rgba(255, 0, 85, 0.4);
-  }
-
-  .stream-status-text {
-      font-family: var(--font-heading);
-      font-size: 0.82rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-header);
-  }
-
-  .toggle-stream-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: transparent;
-      border: none;
-      color: #6c7482;
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-  }
-
-  .toggle-stream-btn:hover {
-      color: var(--text-header);
-      background-color: var(--border-soft);
-  }
-
-  .toggle-icon {
-      width: 14px;
-      height: 14px;
-      transition: transform 0.3s ease;
-  }
-
-  .stream-banner--collapsed .toggle-icon {
-      transform: rotate(180deg);
-  }
-
-  .stream-body-collapsible {
-      max-height: 800px;
-      overflow: hidden;
-      transition: max-height 0.4s cubic-bezier(0, 1, 0, 1);
-  }
-
-  .stream-banner--collapsed .stream-body-collapsible {
-      max-height: 0;
+  .stream-banner:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 8px 24px var(--accent-glow);
   }
 
   .stream-embed-container {
-      aspect-ratio: 16 / 9;
       width: 100%;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid rgba(145, 70, 255, 0.25);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      height: 100%;
+      position: relative;
   }
 
   .stream-banner.live-border {
-      border-color: rgba(145, 70, 255, 0.3);
+      border-color: #9146ff;
+      box-shadow: 0 0 15px rgba(145, 70, 255, 0.3);
   }
 
   .stream-banner.offline-border {
-      border-color: rgba(255, 0, 85, 0.2);
-  }
-
-  .stream-banner::before {
-      content: "";
-      position: absolute;
-      top: -50%;
-      right: -20%;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(145, 70, 255, 0.15) 0%, transparent 70%);
-      pointer-events: none;
-  }
-
-  .stream-skeleton {
-      width: 100%;
-      height: 100%;
-      background-color: #161b22;
-      position: relative;
-      overflow: hidden;
-  }
-
-  .stream-skeleton-glow {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
-      animation: skeletonLoading 1.5s infinite;
-  }
-
-  @keyframes skeletonLoading {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
+      border-color: var(--border-soft);
   }
 
   /* Lazy Lite Embed Covers */
@@ -335,14 +173,19 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
   .cover-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.35);
       z-index: 1;
+      transition: background 0.25s ease;
+  }
+
+  .stream-lazy-cover:hover .cover-overlay {
+      background: rgba(0, 0, 0, 0.2);
   }
 
   .play-btn-circle {
-      width: 68px;
-      height: 68px;
-      background: rgba(145, 70, 255, 0.85); /* Twitch purple */
+      width: 54px;
+      height: 54px;
+      background: rgba(145, 70, 255, 0.9); /* Twitch purple */
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -354,13 +197,13 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
   }
 
   .yt-red-btn {
-      background: rgba(229, 9, 20, 0.9) !important; /* YouTube Red */
+      background: rgba(229, 9, 20, 0.95) !important; /* YouTube Red */
   }
 
   .play-icon-svg {
-      width: 28px;
-      height: 28px;
-      margin-left: 4px;
+      width: 22px;
+      height: 22px;
+      margin-left: 3px;
       color: #ffffff;
   }
 
@@ -368,7 +211,7 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
       position: absolute;
       bottom: 12px;
       font-family: var(--font-heading);
-      font-size: 0.72rem;
+      font-size: 0.65rem;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 1.5px;
@@ -380,7 +223,7 @@ const youtubeThumbnailUrl = `/stream-cover-${youtubeId}.webp`;
 
   .stream-lazy-cover:hover .play-btn-circle {
       transform: scale(1.1);
-      box-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
   }
 
   .stream-lazy-cover:hover .cover-label {
