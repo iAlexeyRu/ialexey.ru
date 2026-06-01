@@ -3,10 +3,37 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../../layouts/Layout.astro';
 
+// Helper to extract the first sentence as plain text
+function getFirstSentence(text: string) {
+  if (!text) return "";
+  const match = text.match(/^.*?[.!?](?:\s|\n|$)/s);
+  if (match) {
+    return match[0].trim();
+  }
+  const newlineIdx = text.indexOf('\n');
+  if (newlineIdx !== -1) {
+    return text.slice(0, newlineIdx).trim();
+  }
+  return text.trim();
+}
+
 // getStaticPaths is required in Astro static mode for dynamic routes
 export async function getStaticPaths() {
   const fs = await import('node:fs');
   const path = await import('node:path');
+  
+  function getFirstSentence(text: string) {
+    if (!text) return "";
+    const match = text.match(/^.*?[.!?](?:\s|\n|$)/s);
+    if (match) {
+      return match[0].trim();
+    }
+    const newlineIdx = text.indexOf('\n');
+    if (newlineIdx !== -1) {
+      return text.slice(0, newlineIdx).trim();
+    }
+    return text.trim();
+  }
   
   const dataDir = process.env.DATA_DIR || '/home/deploy/ialexey-feed/data';
   const prodFeedJsonPath = path.join(dataDir, 'feed.json');
@@ -54,7 +81,7 @@ export async function getStaticPaths() {
       .slice(0, 3)
       .map((x: any) => ({
         id: x.message_id || x.id.split(':').pop(),
-        title: x.text || "",
+        title: getFirstSentence(x.text || ""),
         date: x.date,
         image: x.image
       }));
@@ -112,8 +139,72 @@ function getSmartBadge(text: string) {
   return { label: "Новости", class: "badge--news" };
 }
 
-const postTitle = truncateText(item.text || "", 86) || `Пост Telegram ${id}`;
-const postDescription = truncateText(item.text || "", 220) || "Сливы и новости ИИ от Алексея Гетманца: короткая Telegram-лента, RSS и статические страницы постов.";
+// Helper to split post content into first sentence (title) and the remaining body text/HTML
+function splitPostContent(text: string, html: string) {
+  if (!text) return { title: "", titleHtml: "", bodyHtml: "" };
+  
+  const firstSentence = getFirstSentence(text);
+  
+  // Consume HTML to find exact index corresponding to firstSentence length
+  const targetLen = firstSentence.length;
+  let textCharCount = 0;
+  let htmlIdx = 0;
+  let insideTag = false;
+  const rawHtml = html || text;
+  
+  while (htmlIdx < rawHtml.length && textCharCount < targetLen) {
+    const char = rawHtml[htmlIdx];
+    if (char === '<') {
+      insideTag = true;
+      htmlIdx++;
+    } else if (char === '>') {
+      insideTag = false;
+      htmlIdx++;
+    } else if (insideTag) {
+      htmlIdx++;
+    } else {
+      if (char === '&') {
+        const semiIdx = rawHtml.indexOf(';', htmlIdx);
+        if (semiIdx !== -1 && semiIdx - htmlIdx < 10) {
+          htmlIdx = semiIdx + 1;
+          textCharCount++;
+          continue;
+        }
+      }
+      textCharCount++;
+      htmlIdx++;
+    }
+  }
+  
+  let titleHtml = rawHtml.slice(0, htmlIdx).trim();
+  let bodyHtml = rawHtml.slice(htmlIdx).trim();
+  
+  // Strip trailing breaks from title and leading breaks from body
+  titleHtml = titleHtml.replace(/<br\s*\/?>$/, '').trim();
+  while (bodyHtml.startsWith('<br>') || bodyHtml.startsWith('<br/>') || bodyHtml.startsWith('<br />')) {
+    bodyHtml = bodyHtml.replace(/^<br\s*\/?>/, '').trim();
+  }
+  
+  // Clean plain text version of the title for page tags
+  const plainTitle = titleHtml
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+    
+  return {
+    title: plainTitle || firstSentence,
+    titleHtml: titleHtml || firstSentence,
+    bodyHtml: bodyHtml
+  };
+}
+
+const { title: postTitle, titleHtml: postTitleHtml, bodyHtml: postBodyHtml } = splitPostContent(item.text || "", item.html || "");
+
+const pageMetaTitle = postTitle || `Пост Telegram ${id}`;
+const postDescription = truncateText(postBodyHtml.replace(/<[^>]+>/g, '') || item.text || "", 220) || "Сливы и новости ИИ от Алексея Гетманца: короткая Telegram-лента, RSS и статические страницы постов.";
 
 const localUrl = `https://ialexey.ru/posts/${id}`;
 const telegramUrl = item.url || `https://t.me/${channelUsername}/${id}`;
@@ -167,7 +258,7 @@ const schemaObject = {
 
 const schema = JSON.stringify(schemaObject);
 ---
-<Layout title={`${postTitle} | ${siteAuthor}`} description={postDescription} schema={schema} canonicalUrl={localUrl}>
+<Layout title={`${pageMetaTitle} | ${siteAuthor}`} description={postDescription} schema={schema} canonicalUrl={localUrl}>
   <main class="post-main">
       
       <!-- Scoped back button -->
@@ -186,7 +277,7 @@ const schema = JSON.stringify(schemaObject);
               </div>
           </div>
           
-          <h1 class="article-title">{postTitle}</h1>
+          <h1 class="article-title" set:html={postTitleHtml}></h1>
           
           {item.image && (
               <div class="article-image-wrap">
@@ -198,7 +289,7 @@ const schema = JSON.stringify(schemaObject);
               </div>
           )}
           
-          <div class="article-body" set:html={item.html || item.text}></div>
+          <div class="article-body" set:html={postBodyHtml || item.html || item.text}></div>
 
           <!-- Divider -->
           <div class="post-divider"></div>
@@ -308,10 +399,13 @@ const schema = JSON.stringify(schemaObject);
   }
 
   .post-article {
-      background-color: transparent;
-      border: none;
-      border-radius: 0;
-      padding: 0 0 1rem 0;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
   }
 
   .meta-row {
@@ -386,7 +480,9 @@ const schema = JSON.stringify(schemaObject);
 
   @media (max-width: 768px) {
       .post-article {
-          padding: 0;
+          padding: 1.25rem;
+          border-radius: 12px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
       }
       .article-title {
           font-size: 1.35rem;
