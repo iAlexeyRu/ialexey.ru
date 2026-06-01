@@ -2,46 +2,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../../layouts/Layout.astro';
-
-// Helper to extract the first sentence as plain text
-function getFirstSentence(text: string) {
-  if (!text) return "";
-  const newlineIdx = text.indexOf('\n');
-  const match = text.match(/^.*?[.!?](?:\s|\n|$)/s);
-  if (match) {
-    const sentence = match[0].trim();
-    if (newlineIdx !== -1 && newlineIdx < match[0].length) {
-      return text.slice(0, newlineIdx).trim();
-    }
-    return sentence;
-  }
-  if (newlineIdx !== -1) {
-    return text.slice(0, newlineIdx).trim();
-  }
-  return text.trim();
-}
+import {
+  getFirstSentence,
+  truncateText,
+  getSmartBadge,
+  formatDate
+} from '../../utils/helpers';
 
 // getStaticPaths is required in Astro static mode for dynamic routes
 export async function getStaticPaths() {
   const fs = await import('node:fs');
   const path = await import('node:path');
-  
-  function getFirstSentence(text: string) {
-    if (!text) return "";
-    const newlineIdx = text.indexOf('\n');
-    const match = text.match(/^.*?[.!?](?:\s|\n|$)/s);
-    if (match) {
-      const sentence = match[0].trim();
-      if (newlineIdx !== -1 && newlineIdx < match[0].length) {
-        return text.slice(0, newlineIdx).trim();
-      }
-      return sentence;
-    }
-    if (newlineIdx !== -1) {
-      return text.slice(0, newlineIdx).trim();
-    }
-    return text.trim();
-  }
   
   const dataDir = process.env.DATA_DIR || '/home/deploy/ialexey-feed/data';
   const prodFeedJsonPath = path.join(dataDir, 'feed.json');
@@ -117,35 +88,8 @@ const { item, latestPosts } = Astro.props as Props;
 const channelUsername = "iAlexeyRu";
 const siteAuthor = "Алексей Гетманец";
 
-// Formatting helpers matching index.astro
-function cleanText(text: string) {
-  return (text || "").replace(/\n{3,}/g, "\n\n").trim();
-}
-function compactText(text: string) {
-  return cleanText(text).replace(/\s+/g, " ").trim();
-}
-function truncateText(value: string, limit: number) {
-  const text = compactText(value);
-  if (text.length <= limit) {
-    return text;
-  }
-  return text.slice(0, Math.max(0, limit - 1)).trimEnd() + "…";
-}
+// Scoped split post helper is kept locally since it performs the HTML tag index traversal
 
-// Smart classification of category badges
-function getSmartBadge(text: string) {
-  const t = (text || "").toLowerCase();
-  if (t.includes("слив") || t.includes("утек") || t.includes("секрет") || t.includes("leak") || t.includes("эксклюзив")) {
-    return { label: "Сливы", class: "badge--leaks" };
-  }
-  if (t.includes("gpt") || t.includes("gemini") || t.includes("claude") || t.includes("anthropic") || t.includes("openai") || t.includes("google") || t.includes("llama")) {
-    return { label: "ИИ-Модели", class: "badge--ai" };
-  }
-  if (t.includes("нейросеть") || t.includes("midjourney") || t.includes("sora") || t.includes("генераци") || t.includes("искусствен")) {
-    return { label: "Нейросети", class: "badge--neural" };
-  }
-  return { label: "Новости", class: "badge--news" };
-}
 
 // Helper to split post content into first sentence (title) and the remaining body text/HTML
 function splitPostContent(text: string, html: string) {
@@ -217,25 +161,7 @@ const postDescription = truncateText(postBodyHtml.replace(/<[^>]+>/g, '') || ite
 const localUrl = `https://ialexey.ru/posts/${id}`;
 const telegramUrl = item.url || `https://t.me/${channelUsername}/${id}`;
 
-// Format date helper matching Europe/Moscow timezone format: DD.MM.YYYY HH:MM
-function formatDate(value: string) {
-  if (!value) return "";
-  try {
-    const date = new Date(value);
-    const formatter = new Intl.DateTimeFormat("ru-RU", {
-      timeZone: "Europe/Moscow",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return formatter.format(date).replace(",", "");
-  } catch (e) {
-    return value;
-  }
-}
+
 
 const formattedDate = formatDate(item.date);
 const badge = getSmartBadge(item.text);

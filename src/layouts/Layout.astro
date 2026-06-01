@@ -1,4 +1,6 @@
 ---
+import { removeLeadingEmoji } from '../utils/helpers';
+
 interface Props {
   title?: string;
   description?: string;
@@ -12,30 +14,6 @@ const {
   schema,
   canonicalUrl = Astro.url.href
 } = Astro.props;
-
-function removeLeadingEmoji(text: string) {
-  if (!text) return "";
-  let cleaned = text.trim();
-  
-  // 1. Regional indicators (flags)
-  const flagMatch = cleaned.match(/^(\p{RI}{2})\s*/u);
-  if (flagMatch) {
-    return cleaned.slice(flagMatch[1].length).trim();
-  }
-  
-  // 2. Emojis with ZWJ and variant selectors
-  const baseEmojiPart = `(?:[^\\s\\w\\d.,!?;:()""''«»а-яА-ЯёЁa-zA-Z][\\ufe00-\\ufe0f\\u20e3]?|[\\ud83c][\\udffb-\\udfff]?)`;
-  const zwjRegex = new RegExp(`^(?:${baseEmojiPart}(?:\\u200d${baseEmojiPart})*)`, 'u');
-  
-  const match = cleaned.match(zwjRegex);
-  if (match && match[0]) {
-    const symbol = match[0];
-    if (/\p{Emoji}/u.test(symbol) && !/^[#*0-9]$/.test(symbol[0])) {
-      return cleaned.slice(symbol.length).trim();
-    }
-  }
-  return cleaned;
-}
 
 const cleanDescription = removeLeadingEmoji(description);
 const siteAuthor = "Алексей Гетманец";

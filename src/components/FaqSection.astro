@@ -1,0 +1,186 @@
+---
+// src/components/FaqSection.astro
+---
+
+<!-- FAQ Section (AEO/SEO optimized) -->
+<section class="faq-section faq-section--collapsed" id="faq">
+    <div class="faq-header-row">
+        <h2 class="section-title" style="margin: 0;">Часто задаваемые вопросы (FAQ)</h2>
+        <button id="toggle-faq-btn" class="toggle-faq-btn" aria-label="Свернуть блок">
+            <span class="faq-toggle-text">Развернуть</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="faq-toggle-icon"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+    </div>
+    <div class="faq-body-collapsible" id="faq-body-collapsible">
+        <div class="faq-list">
+            <div class="faq-item">
+                <h3 class="faq-question">Кто такой Алексей Гетманец?</h3>
+                <p class="faq-answer">
+                    Алексей Гетманец — исследователь ИИ, разработчик и блогер, делящийся свежими новостями, сливами и инсайдами из мира нейросетей.
+                </p>
+            </div>
+            <div class="faq-item">
+                <h3 class="faq-question">Откуда берутся сливы и новости ИИ?</h3>
+                <p class="faq-answer">
+                    Информация собирается из открытых источников, закрытых бета-веток продуктов, каналов разработчиков и различных сообществ в Telegram.
+                </p>
+            </div>
+            <div class="faq-item">
+                <h3 class="faq-question">Как подписаться на обновления?</h3>
+                <p class="faq-answer">
+                    Вы можете читать новости на этом сайте, подписаться на Telegram-канал <a href="https://t.me/iAlexeyRu" target="_blank" rel="noopener">@iAlexeyRu</a> или использовать <a href="/feed.xml">RSS-ленту</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+  // FAQ Collapse Toggle
+  const faqSection = document.getElementById('faq');
+  const toggleFaqBtn = document.getElementById('toggle-faq-btn');
+  const faqToggleText = toggleFaqBtn?.querySelector('.faq-toggle-text');
+
+  if (faqSection && toggleFaqBtn && faqToggleText) {
+      const toggleFAQ = () => {
+          const isCollapsed = faqSection.classList.toggle('faq-section--collapsed');
+          faqToggleText.textContent = isCollapsed ? 'Развернуть' : 'Свернуть';
+      };
+      
+      toggleFaqBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFAQ();
+      });
+
+      const faqHeaderRow = faqSection.querySelector('.faq-header-row');
+      if (faqHeaderRow) {
+          faqHeaderRow.style.cursor = 'pointer';
+          faqHeaderRow.addEventListener('click', toggleFAQ);
+      }
+  }
+</script>
+
+<style>
+  /* FAQ SECTION (AEO/SEO optimized) */
+  .faq-section {
+      margin-top: 2.5rem;
+      border-top: none;
+      padding-top: 0;
+  }
+
+  .section-title {
+      font-size: 1.15rem;
+      margin: 0 0 1.25rem;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      border-left: 2px solid var(--accent);
+      padding-left: 0.6rem;
+      color: var(--text-header);
+  }
+
+  .faq-list {
+      display: grid;
+      gap: 1.75rem;
+      margin-top: 1.5rem;
+  }
+
+  .faq-item {
+      background-color: transparent;
+      border: none;
+      border-left: 3px solid var(--border);
+      padding: 0 0 0 1.25rem;
+      border-radius: 0;
+      transition: border-color 0.25s ease;
+      overflow: hidden;
+  }
+
+  .faq-item:hover {
+      border-left-color: var(--accent);
+      box-shadow: none;
+  }
+
+  /* FAQ main collapse styles */
+  .faq-header-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+      transition: margin 0.3s ease;
+      cursor: pointer;
+      user-select: none;
+  }
+
+  .faq-section--collapsed .faq-header-row {
+      margin-bottom: 0;
+  }
+
+  .toggle-faq-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-header);
+      font-family: var(--font-heading);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .toggle-faq-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background-color: var(--accent-glow);
+  }
+
+  .faq-toggle-icon {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.3s ease;
+  }
+
+  /* Rotate icon when collapsed (arrow pointing down) */
+  .faq-section--collapsed .faq-toggle-icon {
+      transform: rotate(180deg);
+  }
+
+  .faq-body-collapsible {
+      max-height: 1200px;
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0, 1, 0, 1);
+  }
+
+  .faq-section--collapsed .faq-body-collapsible {
+      max-height: 0;
+  }
+
+  .faq-question {
+      margin: 0;
+      padding: 0.2rem 0 0.5rem 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-header);
+  }
+
+  .faq-answer {
+      margin: 0;
+      padding: 0 0 0.2rem 0;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text-main);
+  }
+
+  .faq-answer a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px dashed var(--accent);
+  }
+
+  .faq-answer a:hover {
+      border-bottom-style: solid;
+  }
+</style>

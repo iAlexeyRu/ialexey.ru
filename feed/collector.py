@@ -6,14 +6,12 @@ import json
 import os
 import re
 import secrets
-import shutil
 import sys
 import tempfile
 import threading
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
-from email.utils import format_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -37,11 +35,6 @@ LIKES_LOCK = threading.Lock()
 INDEXNOW_STATE_JSON = DATA_DIR / "indexnow.json"
 INDEXNOW_KEY_FILE = DATA_DIR / "indexnow.key"
 PUBLIC_FEED_JSON = SITE_ROOT / "feed.json"
-PUBLIC_RSS = SITE_ROOT / "feed.xml"
-PUBLIC_SITEMAP = SITE_ROOT / "sitemap.xml"
-PUBLIC_ROBOTS = SITE_ROOT / "robots.txt"
-PUBLIC_LLMS = SITE_ROOT / "llms.txt"
-PUBLIC_POSTS_DIR = SITE_ROOT / "posts"
 SOURCE_MEDIA_DIR = Path("/home/deploy/repos/ialexey-web/media")
 PUBLIC_MEDIA_DIR = Path("/home/deploy/ialexey-web/media")
 METRICS_PATH = "/stats/pageview"
@@ -52,15 +45,6 @@ SITE_DESCRIPTION = "Сливы и новости ИИ от Алексея Гет
 SITE_AUTHOR = "Алексей Гетманец"
 X_PROFILE_URL = "https://x.com/iAlexeyRu"
 TELEGRAM_URL = f"https://t.me/{CHANNEL_USERNAME}"
-
-CSS_START = "        /* TG_FEED_CSS_START */"
-CSS_END = "        /* TG_FEED_CSS_END */"
-META_START = "    <!-- GENERATED_META_START -->"
-META_END = "    <!-- GENERATED_META_END -->"
-SECTION_START = "    <!-- TELEGRAM_FEED_SECTION_START -->"
-SECTION_END = "    <!-- TELEGRAM_FEED_SECTION_END -->"
-ITEMS_START = "        <!-- TG_FEED_ITEMS_START -->"
-ITEMS_END = "        <!-- TG_FEED_ITEMS_END -->"
 
 
 def now_iso():
@@ -110,19 +94,6 @@ def parse_date(value):
         return datetime.now(timezone.utc)
 
 
-def xml_escape(value):
-    return html.escape(str(value or ""), quote=True)
-
-
-def json_ld(data):
-    text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-    return text.replace("<", "\\u003c")
-
-
-def cdata(value):
-    return "<![CDATA[" + str(value or "").replace("]]>", "]]]]><![CDATA[>") + "]]>"
-
-
 def compact_text(value):
     return re.sub(r"\s+", " ", clean_text(value)).strip()
 
@@ -136,14 +107,6 @@ def truncate_text(value, limit):
 
 def post_path(item):
     return f"/posts/{int(item.get('message_id') or 0)}/"
-
-
-def post_title(item):
-    return truncate_text(item.get("text", ""), 86) or f"Пост Telegram {item.get('message_id')}"
-
-
-def post_description(item):
-    return truncate_text(item.get("text", ""), 220) or SITE_DESCRIPTION
 
 
 def load_feed():
@@ -384,17 +347,6 @@ def iso_from_unix(ts):
     return datetime.fromtimestamp(int(ts), timezone.utc).replace(microsecond=0).isoformat()
 
 
-def format_date(value):
-    if not value:
-        return ""
-    try:
-        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        dt = dt.astimezone(ZoneInfo("Europe/Moscow"))
-        return dt.strftime("%d.%m.%Y %H:%M")
-    except Exception:
-        return value
-
-
 def clean_text(text):
     return re.sub(r"\n{3,}", "\n\n", (text or "").strip())
 
@@ -625,282 +577,6 @@ def seed_public():
     log(f"Импортировано публичных постов: {len(seeded)}; в ленте: {len(items)}")
 
 
-def generated_head_meta(items):
-    graph = [
-        {
-            "@type": "Person",
-            "@id": site_url("/#person"),
-            "name": SITE_AUTHOR,
-            "url": site_url("/"),
-            "image": site_url("/avatar.png"),
-            "sameAs": [TELEGRAM_URL, X_PROFILE_URL],
-        },
-        {
-            "@type": "WebSite",
-            "@id": site_url("/#website"),
-            "url": site_url("/"),
-            "name": SITE_TITLE,
-            "description": SITE_DESCRIPTION,
-            "inLanguage": "ru-RU",
-            "publisher": {"@id": site_url("/#person")},
-        },
-    ]
-    if items:
-        graph.append(
-            {
-                "@type": "ItemList",
-                "@id": site_url("/#telegram-feed"),
-                "name": "Последние посты Telegram",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": idx,
-                        "url": site_url(post_path(item)),
-                        "name": post_title(item),
-                    }
-                    for idx, item in enumerate(items, start=1)
-                ],
-            }
-        )
-    schema = {"@context": "https://schema.org", "@graph": graph}
-    return f"""{META_START}
-    <meta name="description" content="{html.escape(SITE_DESCRIPTION, quote=True)}">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="{site_url("/")}">
-    <link rel="alternate" type="application/rss+xml" title="{html.escape(SITE_TITLE, quote=True)}" href="{site_url("/feed.xml")}">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="{html.escape(SITE_AUTHOR, quote=True)}">
-    <meta property="og:title" content="{html.escape(SITE_TITLE, quote=True)}">
-    <meta property="og:description" content="{html.escape(SITE_DESCRIPTION, quote=True)}">
-    <meta property="og:url" content="{site_url("/")}">
-    <meta property="og:image" content="{site_url("/avatar.png")}">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="{html.escape(SITE_TITLE, quote=True)}">
-    <meta name="twitter:description" content="{html.escape(SITE_DESCRIPTION, quote=True)}">
-    <meta name="twitter:image" content="{site_url("/avatar.png")}">
-    <script type="application/ld+json">{json_ld(schema)}</script>
-{META_END}"""
-
-
-def ensure_head_meta(document, items):
-    meta = generated_head_meta(items)
-    if META_START in document and META_END in document:
-        return re.sub(
-            re.escape(META_START) + r".*?" + re.escape(META_END),
-            meta,
-            document,
-            flags=re.S,
-        )
-    return document.replace("    <style>", meta + "\n    <style>", 1)
-
-
-def render_rss(items):
-    updated = format_datetime(parse_date(items[0].get("date")) if items else datetime.now(timezone.utc))
-    rss_items = []
-    for item in items:
-        local_url = site_url(post_path(item))
-        rss_items.append(
-            f"""        <item>
-            <title>{xml_escape(post_title(item))}</title>
-            <link>{xml_escape(local_url)}</link>
-            <guid isPermaLink="false">{xml_escape(item.get("id"))}</guid>
-            <pubDate>{format_datetime(parse_date(item.get("date")))}</pubDate>
-            <description>{cdata(item.get("html") or text_to_html(item.get("text", "")))}</description>
-            <source url="{xml_escape(item.get("url", TELEGRAM_URL))}">Telegram / @{xml_escape(CHANNEL_USERNAME)}</source>
-        </item>"""
-        )
-    return f"""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
-    <channel>
-        <title>{xml_escape(SITE_TITLE)}</title>
-        <link>{xml_escape(site_url("/"))}</link>
-        <description>{xml_escape(SITE_DESCRIPTION)}</description>
-        <language>ru</language>
-        <lastBuildDate>{updated}</lastBuildDate>
-{chr(10).join(rss_items)}
-    </channel>
-</rss>
-"""
-
-
-def render_sitemap(items):
-    urls = [(site_url("/"), parse_date(items[0].get("date")) if items else datetime.now(timezone.utc), "daily")]
-    for item in items:
-        urls.append((site_url(post_path(item)), parse_date(item.get("date")), "weekly"))
-    entries = "\n".join(
-        f"""    <url>
-        <loc>{xml_escape(url)}</loc>
-        <lastmod>{dt.date().isoformat()}</lastmod>
-        <changefreq>{changefreq}</changefreq>
-    </url>"""
-        for url, dt, changefreq in urls
-    )
-    return f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{entries}
-</urlset>
-"""
-
-
-def render_robots():
-    return f"""User-agent: *
-Allow: /
-Disallow: {STATS_DASHBOARD_PATH}
-Disallow: {METRICS_PATH}
-
-Sitemap: {site_url("/sitemap.xml")}
-Host: {public_url_host()}
-"""
-
-
-def render_llms(items):
-    lines = [
-        f"# {SITE_AUTHOR}",
-        "",
-        f"> {SITE_DESCRIPTION}",
-        "",
-        "## Основное",
-        "",
-        f"- Сайт: {site_url('/')}",
-        f"- Telegram: {TELEGRAM_URL}",
-        f"- X / Twitter: {X_PROFILE_URL}",
-        f"- RSS: {site_url('/feed.xml')}",
-        f"- Sitemap: {site_url('/sitemap.xml')}",
-        "",
-        "## Последние посты",
-        "",
-    ]
-    if not items:
-        lines.append("- Постов пока нет.")
-    for item in items:
-        date = format_date(item.get("date"))
-        lines.append(f"- [{post_title(item)}]({site_url(post_path(item))}) — {date} MSK")
-    return "\n".join(lines).rstrip() + "\n"
-
-
-def metric_beacon_script():
-    return """<script>
-(() => {
-    const payload = JSON.stringify({ path: window.location.pathname || "/" });
-    try {
-        if (navigator.sendBeacon) {
-            navigator.sendBeacon("/stats/pageview", new Blob([payload], { type: "application/json" }));
-            return;
-        }
-        fetch("/stats/pageview", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload,
-            keepalive: true,
-            credentials: "omit",
-            cache: "no-store"
-        });
-    } catch (_) {}
-})();
-</script>"""
-
-
-def render_post_page(item):
-    title = post_title(item)
-    description = post_description(item)
-    local_url = site_url(post_path(item))
-    telegram_url = item.get("url", TELEGRAM_URL)
-    date_iso = html.escape(item.get("date", ""))
-    date_label = html.escape(format_date(item.get("date")))
-    body = item.get("html") or text_to_html(item.get("text", ""))
-    
-    image_html = ""
-    if item.get("image"):
-        image_url = "/" + html.escape(item["image"])
-        image_html = f'<div class="telegram-post__image-wrap" style="margin-bottom: 1.5rem; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); max-width: 100%; background: #000; display: flex; justify-content: center;"><img src="{image_url}" class="telegram-post__image" alt="Изображение" style="max-width: 100%; max-height: 600px; height: auto; display: block; object-fit: contain;"></div>'
-        
-    schema = {
-        "@context": "https://schema.org",
-        "@type": "Article",
-        "headline": title,
-        "description": description,
-        "url": local_url,
-        "datePublished": item.get("date"),
-        "dateModified": item.get("date"),
-        "inLanguage": "ru-RU",
-        "author": {"@type": "Person", "name": SITE_AUTHOR, "url": site_url("/")},
-        "publisher": {"@type": "Person", "name": SITE_AUTHOR, "url": site_url("/")},
-        "mainEntityOfPage": local_url,
-        "isBasedOn": telegram_url,
-    }
-    return f"""<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{html.escape(title)} | {html.escape(SITE_AUTHOR)}</title>
-    <meta name="description" content="{html.escape(description, quote=True)}">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="{local_url}">
-    <link rel="alternate" type="application/rss+xml" title="{html.escape(SITE_TITLE, quote=True)}" href="{site_url("/feed.xml")}">
-    <meta property="og:type" content="article">
-    <meta property="og:site_name" content="{html.escape(SITE_AUTHOR, quote=True)}">
-    <meta property="og:title" content="{html.escape(title, quote=True)}">
-    <meta property="og:description" content="{html.escape(description, quote=True)}">
-    <meta property="og:url" content="{local_url}">
-    <meta property="og:image" content="{site_url("/avatar.png")}">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="{html.escape(title, quote=True)}">
-    <meta name="twitter:description" content="{html.escape(description, quote=True)}">
-    <meta name="twitter:image" content="{site_url("/avatar.png")}">
-    <script type="application/ld+json">{json_ld(schema)}</script>
-    <style>
-        :root {{ --bg-color: #0d1117; --card-bg: #161b22; --text-main: #c9d1d9; --text-header: #ffffff; --accent: #58a6ff; --accent-green: #3fb950; --border: #30363d; --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }}
-        body {{ margin: 0; background: var(--bg-color); color: var(--text-main); font: 18px/1.65 var(--font-sans); }}
-        a {{ color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }}
-        a:hover {{ border-bottom-color: var(--accent); }}
-        main {{ max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem; }}
-        .top {{ display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }}
-        .avatar {{ width: 58px; height: 58px; border-radius: 50%; border: 1px solid var(--border); object-fit: cover; }}
-        .name {{ color: var(--text-header); font: 700 1.2rem var(--font-mono); }}
-        .tagline, .meta {{ color: #8b949e; font-family: var(--font-mono); font-size: 0.88rem; }}
-        article {{ border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); padding: 1.25rem; }}
-        .meta {{ display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }}
-        h1 {{ margin: 0 0 1rem; color: var(--text-header); font: 700 1.8rem/1.25 var(--font-mono); }}
-        .body {{ margin: 0; }}
-        .back {{ display: inline-block; margin-top: 1.5rem; font-family: var(--font-mono); }}
-        @media (max-width: 720px) {{ main {{ padding: 1.25rem 1rem; }} body {{ font-size: 16px; }} .meta {{ display: block; }} h1 {{ font-size: 1.35rem; }} }}
-    </style>
-</head>
-<body>
-<main>
-    <div class="top">
-        <a href="/"><img class="avatar" src="/avatar.png" alt="{html.escape(SITE_AUTHOR)}"></a>
-        <div>
-            <div class="name">{html.escape(SITE_AUTHOR)}</div>
-            <div class="tagline">Сливы и новости ИИ</div>
-        </div>
-    </div>
-    <article>
-        <div class="meta">
-            <span><a href="{html.escape(telegram_url)}" target="_blank" rel="noopener">Telegram</a> / @{html.escape(CHANNEL_USERNAME)}</span>
-            <time datetime="{date_iso}">{date_label} MSK</time>
-        </div>
-        <h1>{html.escape(title)}</h1>
-        {image_html}
-        <p class="body">{body}</p>
-    </article>
-    <a class="back" href="/">← На главную</a>
-</main>
-{metric_beacon_script()}
-</body>
-</html>
-"""
-
-
-def render_post_pages(items):
-    if PUBLIC_POSTS_DIR.exists():
-        shutil.rmtree(PUBLIC_POSTS_DIR)
-    for item in items:
-        path = PUBLIC_POSTS_DIR / str(int(item.get("message_id") or 0)) / "index.html"
-        atomic_write(path, render_post_page(item), permissions=0o664)
-
-
 def indexnow_key():
     if INDEXNOW_KEY_FILE.exists():
         key = INDEXNOW_KEY_FILE.read_text(encoding="utf-8").strip()
@@ -948,145 +624,6 @@ def ping_indexnow(urls):
             log(f"IndexNow ping: {response.status}, urls: {len(payload['urlList'])}")
     except Exception as exc:
         log(f"IndexNow пропущен после ошибки: {exc}")
-
-
-def render_static_outputs(items):
-    publish_public_feed()
-    render_post_pages(items)
-    atomic_write(PUBLIC_RSS, render_rss(items), permissions=0o664)
-    atomic_write(PUBLIC_SITEMAP, render_sitemap(items), permissions=0o664)
-    atomic_write(PUBLIC_ROBOTS, render_robots(), permissions=0o664)
-    atomic_write(PUBLIC_LLMS, render_llms(items), permissions=0o664)
-    urls = [site_url("/"), site_url("/feed.xml"), site_url("/llms.txt"), *[site_url(post_path(item)) for item in items]]
-    ping_indexnow(urls)
-
-
-def feed_css():
-    return f"""{CSS_START}
-        #news {{
-            padding-top: 0;
-            padding-bottom: 1rem;
-            border-bottom: none;
-        }}
-
-        .telegram-feed {{
-            margin-top: 0;
-            display: grid;
-            gap: 1rem;
-        }}
-
-        .telegram-post {{
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--card-bg);
-            padding: 1rem;
-        }}
-
-        .telegram-post__meta {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            color: #8b949e;
-            font-family: var(--font-mono);
-            font-size: 0.78rem;
-            margin-bottom: 0.75rem;
-        }}
-
-        .telegram-post__body {{
-            margin: 0;
-            color: var(--text-main);
-        }}
-
-        .telegram-post__image-wrap {{
-            margin-top: 1rem;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            max-width: 420px;
-            display: inline-block;
-            vertical-align: top;
-        }}
-
-        .telegram-post__image {{
-            max-width: 420px;
-            width: 100%;
-            height: auto;
-            display: block;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }}
-
-        .telegram-post__image:hover {{
-            transform: scale(1.02);
-        }}
-
-        .telegram-feed__empty {{
-            border: 1px dashed var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            color: #8b949e;
-            background: rgba(22, 27, 34, 0.55);
-        }}
-
-        @media (max-width: 720px) {{
-            .telegram-post__meta {{
-                display: block;
-            }}
-        }}
-{CSS_END}"""
-
-
-def render_items(items):
-    if not items:
-        return '            <div class="telegram-feed__empty">Лента подключена. Новые посты из Telegram появятся здесь автоматически.</div>'
-    chunks = []
-    for item in items:
-        date = html.escape(format_date(item.get("date")))
-        body = item.get("html") or text_to_html(item.get("text", ""))
-        url = html.escape(item.get("url", f"https://t.me/{CHANNEL_USERNAME}"))
-        
-        image_html = ""
-        if item.get("image"):
-            image_url = html.escape(item["image"])
-            image_html = (
-                "\n            <div class=\"telegram-post__image-wrap\"><img src=\"" + image_url
-                + "\" class=\"telegram-post__image\" alt=\"Изображение поста\" loading=\"lazy\"></div>"
-            )
-        chunks.append(
-            f"""            <article class="telegram-post">
-                <div class="telegram-post__meta">
-                    <span><a href="{url}" target="_blank" rel="noopener">Telegram</a> / @{html.escape(CHANNEL_USERNAME)}</span>
-                    <time datetime="{html.escape(item.get("date", ""))}">{date} MSK</time>
-                </div>
-                <p class="telegram-post__body">{body}</p>{image_html}
-            </article>"""
-        )
-    return "\n".join(chunks)
-
-
-def feed_section(items):
-    return f"""{SECTION_START}
-    <section id="news">
-        <div class="telegram-feed">
-{ITEMS_START}
-{render_items(items)}
-{ITEMS_END}
-        </div>
-    </section>
-{SECTION_END}"""
-
-
-def ensure_css(document):
-    css = feed_css()
-    if CSS_START in document and CSS_END in document:
-        return re.sub(
-            re.escape(CSS_START) + r".*?" + re.escape(CSS_END),
-            css,
-            document,
-            flags=re.S,
-        )
-    return document.replace("    </style>", css + "\n    </style>")
 
 
 def run_astro_build():
@@ -1144,7 +681,6 @@ def render_site(items=None):
         ping_indexnow(urls)
     except Exception as exc:
         log(f"Ошибка IndexNow: {exc}")
-
 
 
 def telegram_api(method, payload=None):

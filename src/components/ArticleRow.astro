@@ -1,0 +1,268 @@
+---
+import {
+  formatDateRussian,
+  truncateText,
+  getPostPath,
+  getSmartBadge,
+  formatViewsCount
+} from '../utils/helpers';
+
+interface Props {
+  item: any;
+  index: number;
+}
+
+const { item, index } = Astro.props;
+
+function cleanArticleTitle(title: string) {
+  if (!title) return "";
+  return title.replace(/^\[Перевод\]\s*/i, "").trim();
+}
+
+const dateStr = formatDateRussian(item.date);
+const title = truncateText(cleanArticleTitle(item.title || item.text || ""), 86);
+const desc = truncateText(item.desc || item.text || "", 180);
+const isHabr = !!item.url;
+const postUrl = isHabr ? item.url : getPostPath(item);
+const isHidden = index >= 5;
+
+// Determine badge dynamically or from Habr categories
+let badge = { label: "Статьи", class: "badge--news", emoji: "📰" };
+if (item.categories && item.categories.length > 0) {
+  const label = item.categories[0];
+  let badgeClass = "badge--neural";
+  let emoji = "🧠";
+  const l = label.toLowerCase();
+  if (l.includes("реверс") || l.includes("reverse") || l.includes("слив")) {
+      badgeClass = "badge--leaks";
+      emoji = "🤫";
+  } else if (l.includes("ии") || l.includes("ai") || l.includes("codex") || l.includes("модел")) {
+      badgeClass = "badge--ai";
+      emoji = "🧠";
+  }
+  badge = { label, class: badgeClass, emoji };
+} else if (item.text) {
+  badge = getSmartBadge(item.text);
+}
+---
+
+<a 
+    href={postUrl} 
+    class={`article-row ${isHidden ? 'article-row--hidden' : ''}`}
+    target={isHabr ? "_blank" : undefined}
+    rel={isHabr ? "noopener noreferrer" : undefined}
+    data-category={badge.class}
+    data-search-text={(title + " " + desc).toLowerCase()}
+>
+    <div class="article-row__img-container">
+        {item.image ? (
+            <img 
+                src={item.image.startsWith('http') ? item.image : `/${item.image}`} 
+                class="article-row__img" 
+                alt={title} 
+                loading="lazy"
+            />
+        ) : (
+            <div class="article-row__placeholder-img">
+                <span class="placeholder-emoji">{badge.emoji}</span>
+            </div>
+        )}
+        <span class={`article-row__badge-overlay badge ${badge.class}`}>{badge.label}</span>
+    </div>
+    <div class="article-row__content">
+        <h3 class="article-row__title">{title}</h3>
+        <p class="article-row__desc">{desc}</p>
+        <div class="article-row__meta-row">
+            <span class="article-row__date">{dateStr}</span>
+            {isHabr && (
+                <>
+                    <span class="article-row__meta-divider">•</span>
+                    <span class="article-row__source-label">Habr</span>
+                </>
+            )}
+            {item.views > 0 && (
+                <>
+                    <span class="article-row__meta-divider">•</span>
+                    <span class="article-row__views" title={isHabr ? "Просмотры на Habr" : "Просмотры в Telegram"}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="views-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        {formatViewsCount(item.views)}
+                    </span>
+                </>
+            )}
+        </div>
+    </div>
+</a>
+
+<style>
+  .article-row {
+      display: flex;
+      gap: 1.5rem;
+      padding: 1rem;
+      margin: 0 -1rem;
+      border-bottom: 1px solid var(--border-soft);
+      border-radius: 12px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      color: inherit;
+  }
+
+  .article-row:last-child {
+      border-bottom: 1px solid transparent;
+  }
+
+  .article-row:hover {
+      background-color: var(--card-bg);
+      border-color: var(--border-hover);
+      box-shadow: 0 8px 24px var(--accent-glow);
+      transform: translateY(-2px);
+  }
+
+  .article-row__img-container {
+      position: relative;
+      flex: 0 0 240px;
+      aspect-ratio: 16 / 9;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #000;
+      border: 1px solid var(--border);
+  }
+
+  .article-row__img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+  }
+
+  .article-row:hover .article-row__img {
+      transform: scale(1.05);
+  }
+
+  .article-row__placeholder-img {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-color) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  }
+
+  .placeholder-emoji {
+      font-size: 2.2rem;
+      opacity: 0.8;
+  }
+
+  .article-row__badge-overlay {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      z-index: 10;
+  }
+
+  .article-row__content {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      justify-content: center;
+  }
+
+  .article-row__title {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--text-header);
+      margin: 0 0 0.5rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: color 0.2s;
+  }
+
+  .article-row:hover .article-row__title {
+      color: var(--accent);
+  }
+
+  .article-row__desc {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      margin: 0 0 0.75rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+  }
+
+  .article-row__meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+  }
+
+  .article-row__date {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+  }
+
+  .article-row__meta-divider {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      opacity: 0.6;
+  }
+
+  .article-row__source-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+  }
+
+  /* Badge styling wrapper matching global style definitions */
+  .badge {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+  }
+  .badge--leaks { background-color: #ff2a3b; color: #ffffff; }
+  .badge--ai { background-color: #00bcff; color: #000000; }
+  .badge--neural { background-color: #bd00ff; color: #ffffff; }
+  .badge--news { background-color: #00e676; color: #000000; }
+
+  @media (max-width: 600px) {
+      .article-row {
+          flex-direction: column;
+          gap: 1rem;
+      }
+      .article-row__img-container {
+          flex: 0 0 auto;
+          width: 100%;
+      }
+  }
+
+  .article-row__views {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+  }
+
+  .views-icon {
+      width: 12px;
+      height: 12px;
+      opacity: 0.7;
+  }
+</style>

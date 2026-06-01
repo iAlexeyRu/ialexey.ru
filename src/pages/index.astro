@@ -3,6 +3,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../layouts/Layout.astro';
 import habrFallback from '../data/habr.json';
+import ArticleRow from '../components/ArticleRow.astro';
+import SidebarItem from '../components/SidebarItem.astro';
+import StreamBanner from '../components/StreamBanner.astro';
+import FaqSection from '../components/FaqSection.astro';
+import {
+  formatTimeOnly,
+  truncateText,
+  removeLeadingEmoji,
+  getPostPath,
+  getSmartBadge,
+  formatViewsCount
+} from '../utils/helpers';
 
 // Configuration
 const channelUsername = "iAlexeyRu";
@@ -85,130 +97,6 @@ if (parsedData) {
 // Sort items by date descending
 const sortedItems = feedItems
   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-// Format date helpers matching Europe/Moscow timezone format: DD.MM.YYYY HH:MM and HH:MM
-function formatDate(value: string) {
-  if (!value) return "";
-  try {
-    const date = new Date(value);
-    const formatter = new Intl.DateTimeFormat("ru-RU", {
-      timeZone: "Europe/Moscow",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return formatter.format(date).replace(",", "");
-  } catch (e) {
-    return value;
-  }
-}
-
-function formatDateRussian(value: string) {
-  if (!value) return "";
-  try {
-    const date = new Date(value);
-    const months = [
-      "января", "февраля", "марта", "апреля", "мая", "июня",
-      "июля", "августа", "сентября", "октября", "ноября", "декабря"
-    ];
-    const day = date.getDate();
-    const month = months[date.getMonth()];
-    const formatterTime = new Intl.DateTimeFormat("ru-RU", {
-      timeZone: "Europe/Moscow",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const timeStr = formatterTime.format(date);
-    return `${day} ${month}, ${timeStr}`;
-  } catch (e) {
-    return value;
-  }
-}
-
-function formatTimeOnly(value: string) {
-  if (!value) return "";
-  try {
-    const date = new Date(value);
-    const formatter = new Intl.DateTimeFormat("ru-RU", {
-      timeZone: "Europe/Moscow",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return formatter.format(date);
-  } catch (e) {
-    return "";
-  }
-}
-
-// Post path helper
-function getPostPath(item: any) {
-  const messageId = item.message_id || item.id.split(':').pop();
-  return `/posts/${messageId}/`;
-}
-
-// Title truncation helpers
-function cleanText(text: string) {
-  return (text || "").replace(/\n{3,}/g, "\n\n").trim();
-}
-function compactText(text: string) {
-  return cleanText(text).replace(/\s+/g, " ").trim();
-}
-function truncateText(value: string, limit: number) {
-  const text = compactText(value);
-  if (text.length <= limit) {
-    return text;
-  }
-  return text.slice(0, Math.max(0, limit - 1)).trimEnd() + "…";
-}
-function removeLeadingEmoji(text: string) {
-  if (!text) return "";
-  let cleaned = text.trim();
-  
-  // 1. Regional indicators (flags)
-  const flagMatch = cleaned.match(/^(\p{RI}{2})\s*/u);
-  if (flagMatch) {
-    return cleaned.slice(flagMatch[1].length).trim();
-  }
-  
-  // 2. Emojis with ZWJ and variant selectors
-  const baseEmojiPart = `(?:[^\\s\\w\\d.,!?;:()""''«»а-яА-ЯёЁa-zA-Z][\\ufe00-\\ufe0f\\u20e3]?|[\\ud83c][\\udffb-\\udfff]?)`;
-  const zwjRegex = new RegExp(`^(?:${baseEmojiPart}(?:\\u200d${baseEmojiPart})*)`, 'u');
-  
-  const match = cleaned.match(zwjRegex);
-  if (match && match[0]) {
-    const symbol = match[0];
-    if (/\p{Emoji}/u.test(symbol) && !/^[#*0-9]$/.test(symbol[0])) {
-      return cleaned.slice(symbol.length).trim();
-    }
-  }
-  return cleaned;
-}
-
-function cleanArticleTitle(title: string) {
-  if (!title) return "";
-  return title.replace(/^\[Перевод\]\s*/i, "").trim();
-}
-
-
-// Smart classification of category badges
-function getSmartBadge(text: string) {
-  const t = (text || "").toLowerCase();
-  if (t.includes("слив") || t.includes("утек") || t.includes("секрет") || t.includes("leak") || t.includes("эксклюзив")) {
-    return { label: "Сливы", class: "badge--leaks", emoji: "🤫" };
-  }
-  if (t.includes("gpt") || t.includes("gemini") || t.includes("claude") || t.includes("anthropic") || t.includes("openai") || t.includes("google") || t.includes("llama")) {
-    return { label: "ИИ-Модели", class: "badge--ai", emoji: "🧠" };
-  }
-  if (t.includes("нейросеть") || t.includes("midjourney") || t.includes("sora") || t.includes("генераци") || t.includes("искусствен")) {
-    return { label: "Нейросети", class: "badge--neural", emoji: "🎨" };
-  }
-  return { label: "Новости", class: "badge--news", emoji: "📰" };
-}
 
 // Schema.org dynamic markup
 const schemaObject = {
@@ -317,17 +205,6 @@ try {
   console.error('Error fetching Telegram views in index.astro build:', e);
 }
 
-function formatViewsCount(views: number) {
-  if (!views) return "0";
-  if (views >= 1000000) {
-    return (views / 1000000).toFixed(1).replace('.0', '') + 'M';
-  }
-  if (views >= 1000) {
-    return (views / 1000).toFixed(1).replace('.0', '') + 'K';
-  }
-  return views.toString();
-}
-
 // 1. "Главные новости" (Top 5 ranked by Telegram views, filtered to last 7 days candidates)
 const sevenDaysAgo = new Date();
 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -427,7 +304,7 @@ if (articleItems.length === 0) {
 }
 
 // Fetch views for Habr articles in parallel with a 3s timeout and local cache
-const habrViewsCachePath = path.resolve('src/data/habr_views_cache.json');
+const habrViewsCachePath = path.join(process.cwd(), 'src/data/habr_views_cache.json');
 let habrViewsCache = {};
 let cacheChanged = false;
 
@@ -444,7 +321,8 @@ try {
     if (item.url && item.url.includes('habr.com')) {
       const now = Date.now();
       const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
-      const cached = habrViewsCache[item.url];
+      const normUrl = item.url.replace(/\/$/, "");
+      const cached = habrViewsCache[normUrl] || habrViewsCache[item.url] || habrViewsCache[item.url + "/"];
 
       if (cached && (now - cached.fetchedAt) < CACHE_TTL_MS) {
         return { ...item, views: cached.views };
@@ -476,7 +354,7 @@ try {
                 views = parseInt(upper.replace(/\s/g, '').replace(/,/g, '')) || 0;
               }
             }
-            habrViewsCache[item.url] = { views, fetchedAt: now };
+            habrViewsCache[normUrl] = { views, fetchedAt: now };
             cacheChanged = true;
             return { ...item, views };
           }
@@ -513,8 +391,6 @@ const sidebarItems = sortedItems.map(item => {
 ---
 <Layout title={siteTitle} description={siteDescription} schema={schema}>
 
-
-
     <div class="page-layout-grid">
       
       <!-- ROW 1 LEFT: ГЛАВНЫЕ НОВОСТИ -->
@@ -549,28 +425,7 @@ const sidebarItems = sortedItems.map(item => {
       <!-- ROW 1 RIGHT: СТРИМ МОЙ -->
       {sidebarItems.length > 0 && (
           <aside class="sidebar-col">
-              <!-- BLOCK 2: СТРИМ МОЙ (Premium Live Stream Box - Minimalist with YouTube fallback) -->
-              <div class="stream-banner" id="stream-block" data-youtube-id={latestCompletedVideoId}>
-                  <div class="stream-header-row">
-                      <div class="stream-title-wrap">
-                          <span class="stream-status-dot" id="stream-status-dot"></span>
-                          <span class="stream-status-text" id="stream-status-text">Загрузка трансляции...</span>
-                      </div>
-                      <button id="toggle-stream-btn" class="toggle-stream-btn" aria-label="Свернуть блок">
-                          <span class="toggle-text">Свернуть</span>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-icon"><path d="m18 15-6-6-6 6"/></svg>
-                      </button>
-                  </div>
-                  <div class="stream-body-collapsible" id="stream-body-collapsible">
-                      <!-- Responsive Video Embed Container -->
-                      <div class="stream-embed-container" id="stream-embed-container">
-                          <!-- Embed will be dynamically injected by JS below -->
-                          <div class="stream-skeleton" id="stream-skeleton">
-                              <div class="stream-skeleton-glow"></div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
+              <StreamBanner youtubeId={latestCompletedVideoId} />
           </aside>
       )}
 
@@ -581,73 +436,9 @@ const sidebarItems = sortedItems.map(item => {
               <div class="telegram-feed__empty" style="padding: 3rem; text-align: center;">Постов пока нет. Новые посты появятся здесь автоматически!</div>
           ) : (
               <div class="articles-list">
-                  {articleItems.map((item, index) => {
-                      const dateStr = formatDateRussian(item.date);
-                      const title = truncateText(cleanArticleTitle(item.title || item.text || ""), 86);
-                      const desc = truncateText(item.desc || item.text || "", 180);
-                      const isHabr = !!item.url;
-                      const postUrl = isHabr ? item.url : getPostPath(item);
-                      const isHidden = index >= 5;
-                      
-                      // Determine badge dynamically or from Habr categories
-                      let badge = { label: "Статьи", class: "badge--news", emoji: "📰" };
-                      if (item.categories && item.categories.length > 0) {
-                          const label = item.categories[0];
-                          let badgeClass = "badge--neural";
-                          let emoji = "🧠";
-                          const l = label.toLowerCase();
-                          if (l.includes("реверс") || l.includes("reverse") || l.includes("слив")) {
-                              badgeClass = "badge--leaks";
-                              emoji = "🤫";
-                          } else if (l.includes("ии") || l.includes("ai") || l.includes("codex") || l.includes("модел")) {
-                              badgeClass = "badge--ai";
-                              emoji = "🧠";
-                          }
-                          badge = { label, class: badgeClass, emoji };
-                      } else if (item.text) {
-                          badge = getSmartBadge(item.text);
-                      }
-                      
-                      return (
-                          <a 
-                              href={postUrl} 
-                              class={`article-row ${isHidden ? 'article-row--hidden' : ''}`}
-                              target={isHabr ? "_blank" : undefined}
-                              rel={isHabr ? "noopener noreferrer" : undefined}
-                              data-category={badge.class}
-                              data-search-text={(title + " " + desc).toLowerCase()}
-                          >
-                              <div class="article-row__img-container">
-                                  {item.image ? (
-                                      <img 
-                                          src={item.image.startsWith('http') ? item.image : `/${item.image}`} 
-                                          class="article-row__img" 
-                                          alt={title} 
-                                          loading="lazy"
-                                      />
-                                  ) : (
-                                      <div class="article-row__placeholder-img">
-                                          <span class="placeholder-emoji">{badge.emoji}</span>
-                                      </div>
-                                  )}
-                                  <span class={`article-row__badge-overlay badge ${badge.class}`}>{badge.label}</span>
-                              </div>
-                              <div class="article-row__content">
-                                  <h3 class="article-row__title">{title}</h3>
-                                  <p class="article-row__desc">{desc}</p>
-                                  <div class="article-row__meta-row">
-                                      <span class="article-row__date">{dateStr}</span>
-                                      {isHabr && (
-                                          <>
-                                              <span class="article-row__meta-divider">•</span>
-                                              <span class="article-row__source-label">Habr</span>
-                                          </>
-                                      )}
-                                  </div>
-                              </div>
-                          </a>
-                      );
-                  })}
+                  {articleItems.map((item, index) => (
+                      <ArticleRow item={item} index={index} />
+                  ))}
               </div>
           )}
 
@@ -669,29 +460,9 @@ const sidebarItems = sortedItems.map(item => {
               </div>
               
               <div class="sidebar-list">
-                  {sidebarItems.map((item, index) => {
-                      const timeStr = formatTimeOnly(item.date);
-                      const title = truncateText(removeLeadingEmoji(item.text || ""), 120) || `Обновление ленты ${item.message_id}`;
-                      const postUrl = getPostPath(item);
-                      const isHidden = index >= 10;
-                      return (
-                          <a 
-                              href={postUrl} 
-                              class={`sidebar-item ${isHidden ? 'sidebar-item--hidden' : ''}`}
-                              data-category={getSmartBadge(item.text).class}
-                              data-search-text={(title + " " + item.text).toLowerCase()}
-                          >
-                              <span class="sidebar-item-time">{timeStr}</span>
-                              <span class="sidebar-item-text">{title}</span>
-                              {item.views > 0 && (
-                                  <span class="sidebar-item-views" title="Просмотры в Telegram">
-                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="views-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                      {formatViewsCount(item.views)}
-                                  </span>
-                              )}
-                          </a>
-                      );
-                  })}
+                  {sidebarItems.map((item, index) => (
+                      <SidebarItem item={item} index={index} />
+                  ))}
               </div>
 
               {sidebarItems.length > 10 && (
@@ -706,38 +477,7 @@ const sidebarItems = sortedItems.map(item => {
       )}
   </div>
 
-   <!-- FAQ Section (AEO/SEO optimized) -->
-    <section class="faq-section faq-section--collapsed" id="faq">
-        <div class="faq-header-row">
-            <h2 class="section-title" style="margin: 0;">Часто задаваемые вопросы (FAQ)</h2>
-            <button id="toggle-faq-btn" class="toggle-faq-btn" aria-label="Свернуть блок">
-                <span class="faq-toggle-text">Развернуть</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="faq-toggle-icon"><path d="m18 15-6-6-6 6"/></svg>
-            </button>
-        </div>
-        <div class="faq-body-collapsible" id="faq-body-collapsible">
-            <div class="faq-list">
-                <div class="faq-item">
-                    <h3 class="faq-question">Кто такой Алексей Гетманец?</h3>
-                    <p class="faq-answer">
-                        Алексей Гетманец — исследователь ИИ, разработчик и блогер, делящийся свежими новостями, сливами и инсайдами из мира нейросетей.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-question">Откуда берутся сливы и новости ИИ?</h3>
-                    <p class="faq-answer">
-                        Информация собирается из открытых источников, закрытых бета-веток продуктов, каналов разработчиков и различных сообществ в Telegram.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-question">Как подписаться на обновления?</h3>
-                    <p class="faq-answer">
-                        Вы можете читать новости на этом сайте, подписаться на Telegram-канал <a href="https://t.me/iAlexeyRu" target="_blank" rel="noopener">@iAlexeyRu</a> или использовать <a href="/feed.xml">RSS-ленту</a>.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
+  <FaqSection />
 
 </Layout>
 
@@ -755,32 +495,6 @@ const sidebarItems = sortedItems.map(item => {
   .controls-active .articles-show-more-wrap,
   .controls-active .sidebar-show-more-wrap {
       display: none !important;
-  }
-
-  /* STREAM BANNER SKELETON LOADER */
-  .stream-skeleton {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(25, 20, 36, 0.3);
-      overflow: hidden;
-  }
-
-  .stream-skeleton-glow {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
-      transform: translateX(-100%);
-      animation: skeleton-shimmer 1.6s infinite;
-  }
-
-  @keyframes skeleton-shimmer {
-      100% {
-          transform: translateX(100%);
-      }
   }
 
   /* MAIN PAGE GRID SYSTEM */
@@ -826,6 +540,8 @@ const sidebarItems = sortedItems.map(item => {
       padding: 12px 0;
       border-bottom: 1px solid var(--border-soft);
       transition: all 0.2s ease;
+      text-decoration: none;
+      color: inherit;
   }
 
   .featured-item-link:last-child {
@@ -882,297 +598,6 @@ const sidebarItems = sortedItems.map(item => {
       opacity: 0.7;
   }
 
-  .likes-icon {
-      width: 11px;
-      height: 11px;
-      opacity: 0.8;
-  }
-
-  .featured-item-views + .featured-item-likes {
-      margin-left: 0;
-  }
-
-  .featured-item-likes {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      flex-shrink: 0;
-      padding-left: 0.5rem;
-      margin-left: auto;
-      transition: color 0.2s;
-  }
-
-  .featured-item-likes.liked {
-      color: var(--accent);
-  }
-  .featured-item-likes.liked .likes-icon {
-      fill: var(--accent);
-      stroke: var(--accent);
-  }
-
-  .article-row__likes {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      transition: color 0.2s;
-  }
-
-  .article-row__likes.liked {
-      color: var(--accent);
-  }
-  .article-row__likes.liked .likes-icon {
-      fill: var(--accent);
-      stroke: var(--accent);
-  }
-
-  .sidebar-item-views {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.2rem;
-      flex-shrink: 0;
-      align-self: center;
-      margin-left: auto;
-  }
-
-  /* 2. PREMIUM STREAM BANNER WITH YOUTUBE FALLBACK */
-  .stream-banner {
-      background: linear-gradient(135deg, rgba(25, 20, 36, 0.6) 0%, rgba(13, 17, 26, 0.8) 100%);
-      border: 1px solid rgba(145, 70, 255, 0.2);
-      border-radius: 16px;
-      padding: 0.9rem 1.15rem;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(145, 70, 255, 0.05);
-      transition: all 0.3s ease;
-  }
-
-  .stream-header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-      transition: margin 0.3s ease;
-  }
-
-  .stream-banner--collapsed .stream-header-row {
-      margin-bottom: 0;
-  }
-
-  .stream-title-wrap {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-  }
-
-  .stream-status-dot {
-      width: 8px;
-      height: 8px;
-      background-color: #6c7482;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-  }
-
-  .stream-status-dot.live {
-      background-color: var(--accent);
-      box-shadow: 0 0 10px var(--accent);
-      animation: pulse 1.8s infinite;
-  }
-
-  .stream-status-dot.offline {
-      background-color: #ff0055; /* YouTube Red Vibe */
-      box-shadow: 0 0 8px rgba(255, 0, 85, 0.4);
-  }
-
-  .stream-status-text {
-      font-family: var(--font-heading);
-      font-size: 0.82rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-header);
-  }
-
-  .toggle-stream-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: transparent;
-      border: none;
-      color: #6c7482;
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-  }
-
-  .toggle-stream-btn:hover {
-      color: var(--text-header);
-      background-color: var(--border-soft);
-  }
-
-  .toggle-icon {
-      width: 14px;
-      height: 14px;
-      transition: transform 0.3s ease;
-  }
-
-  .stream-banner--collapsed .toggle-icon {
-      transform: rotate(180deg);
-  }
-
-  .stream-body-collapsible {
-      max-height: 800px;
-      overflow: hidden;
-      transition: max-height 0.4s cubic-bezier(0, 1, 0, 1);
-  }
-
-  .stream-banner--collapsed .stream-body-collapsible {
-      max-height: 0;
-  }
-
-  .stream-embed-container {
-      aspect-ratio: 16 / 9;
-      width: 100%;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid rgba(145, 70, 255, 0.25);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-  }
-
-  .stream-banner.live-border {
-      border-color: rgba(145, 70, 255, 0.3);
-  }
-
-  .stream-banner.offline-border {
-      border-color: rgba(255, 0, 85, 0.2);
-  }
-
-  .stream-banner::before {
-      content: "";
-      position: absolute;
-      top: -50%;
-      right: -20%;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(145, 70, 255, 0.15) 0%, transparent 70%);
-      pointer-events: none;
-  }
-
-  .stream-header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-  }
-
-  .stream-live-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background-color: rgba(145, 70, 255, 0.1);
-      border: 1px solid rgba(145, 70, 255, 0.3);
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-family: var(--font-mono);
-      font-size: 0.65rem;
-      font-weight: 700;
-      color: #b380ff;
-      text-transform: uppercase;
-  }
-
-  .stream-live-dot {
-      width: 6px;
-      height: 6px;
-      background-color: #9146ff;
-      border-radius: 50%;
-      box-shadow: 0 0 8px #9146ff;
-  }
-
-  .stream-subtitle-mono {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: #6c7482;
-      letter-spacing: 1px;
-  }
-
-  .stream-title {
-      font-family: var(--font-heading);
-      font-size: 1.4rem;
-      color: var(--text-header);
-      margin: 0 0 0.5rem;
-  }
-
-  .stream-text {
-      font-size: 0.95rem;
-      line-height: 1.5;
-      color: var(--text-main);
-      margin: 0 0 1.25rem;
-      max-width: 650px;
-  }
-
-  .stream-buttons {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-  }
-
-  .stream-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-      font-weight: bold;
-      padding: 0.65rem 1.25rem;
-      border-radius: 6px;
-      transition: all 0.2s;
-  }
-
-  .stream-btn--youtube {
-      background-color: #FF0000;
-      color: #ffffff;
-      box-shadow: 0 4px 12px rgba(255, 0, 0, 0.2);
-  }
-
-  .stream-btn--youtube:hover {
-      background-color: #cc0000;
-      transform: translateY(-2px);
-      color: #ffffff;
-  }
-
-  .stream-btn--twitch {
-      background-color: #9146FF;
-      color: #ffffff;
-      box-shadow: 0 4px 12px rgba(145, 70, 255, 0.2);
-  }
-
-  .stream-btn--twitch:hover {
-      background-color: #772ce8;
-      transform: translateY(-2px);
-      color: #ffffff;
-  }
-
-  .stream-btn-icon {
-      width: 16px;
-      height: 16px;
-  }
-
-  /* Managed inside stream-banner styles above */
-
   /* 3. ARTICLES SECTION TITLE & GRID */
   .section-title {
       font-size: 1.15rem;
@@ -1188,153 +613,6 @@ const sidebarItems = sortedItems.map(item => {
       display: flex;
       flex-direction: column;
       gap: 1.75rem;
-  }
-
-  .article-row {
-      display: flex;
-      gap: 1.5rem;
-      padding: 1rem;
-      margin: 0 -1rem;
-      border-bottom: 1px solid var(--border-soft);
-      border-radius: 12px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .article-row:last-child {
-      border-bottom: 1px solid transparent;
-  }
-
-  .article-row:hover {
-      background-color: var(--card-bg);
-      border-color: var(--border-hover);
-      box-shadow: 0 8px 24px var(--accent-glow);
-      transform: translateY(-2px);
-  }
-
-  .article-row__img-container {
-      position: relative;
-      flex: 0 0 240px;
-      aspect-ratio: 16 / 9;
-      border-radius: 8px;
-      overflow: hidden;
-      background-color: #000;
-      border: 1px solid var(--border);
-  }
-
-  .article-row__img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.4s ease;
-  }
-
-  .article-row:hover .article-row__img {
-      transform: scale(1.05);
-  }
-
-  .article-row__placeholder-img {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-color) 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-  }
-
-  .placeholder-emoji {
-      font-size: 2.2rem;
-      opacity: 0.8;
-  }
-
-  .article-row__badge-overlay {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-      z-index: 10;
-  }
-
-  .article-row__content {
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-      justify-content: center;
-  }
-
-  .article-row__title {
-      font-family: var(--font-heading);
-      font-size: 1.25rem;
-      font-weight: 700;
-      line-height: 1.35;
-      color: var(--text-header);
-      margin: 0 0 0.5rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      transition: color 0.2s;
-  }
-
-  .article-row:hover .article-row__title {
-      color: var(--accent);
-  }
-
-  .article-row__desc {
-      font-size: 0.9rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
-      margin: 0 0 0.75rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-  }
-
-  .article-row__meta-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-  }
-
-  .article-row__date {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--text-muted);
-  }
-
-  .article-row__meta-divider {
-      color: var(--text-muted);
-      font-size: 0.72rem;
-      opacity: 0.6;
-  }
-
-  .article-row__source-label {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--accent);
-      text-transform: uppercase;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-  }
-
-  .article-row__views {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-  }
-
-  @media (max-width: 600px) {
-      .article-row {
-          flex-direction: column;
-          gap: 1rem;
-      }
-      .article-row__img-container {
-          flex: 0 0 auto;
-          width: 100%;
-      }
   }
 
   /* 4. CHAMPIONAT SIDEBAR - ALIGNED TO TOP GRID */
@@ -1366,62 +644,6 @@ const sidebarItems = sortedItems.map(item => {
   .sidebar-list {
       display: flex;
       flex-direction: column;
-  }
-
-  .sidebar-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      padding: 10px 12px;
-      margin: 0 -12px;
-      border-bottom: 1px dashed var(--border-dashed);
-      border-radius: 8px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .sidebar-item:last-child {
-      border-bottom: 1px dashed transparent;
-  }
-
-  .sidebar-item-time {
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      flex: 0 0 42px;
-      font-weight: 400;
-      margin-top: 0.15rem; /* Align perfectly with first line of text */
-  }
-
-  .sidebar-item-text {
-      font-size: 0.9rem;
-      line-height: 1.45;
-      color: var(--text-main);
-      font-weight: 500;
-      flex-grow: 1;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-  }
-
-  .sidebar-item:hover .sidebar-item-text {
-      color: var(--accent);
-  }
-
-  .sidebar-item:hover {
-      background-color: var(--card-bg);
-      border-bottom-color: transparent;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transform: translateX(4px);
-  }
-
-  .sidebar-item--hidden {
-      display: none !important;
-  }
-
-  .sidebar-list--expanded .sidebar-item--hidden {
-      display: flex !important;
-      animation: fadeIn 0.4s ease forwards;
   }
 
   .sidebar-show-more-wrap {
@@ -1467,11 +689,12 @@ const sidebarItems = sortedItems.map(item => {
       transform: translateY(2px);
   }
 
-  .article-row--hidden {
-      display: none !important;
+  .articles-list--expanded .article-row--hidden {
+      display: flex !important;
+      animation: fadeIn 0.4s ease forwards;
   }
 
-  .articles-list--expanded .article-row--hidden {
+  .sidebar-list--expanded .sidebar-item--hidden {
       display: flex !important;
       animation: fadeIn 0.4s ease forwards;
   }
@@ -1529,119 +752,6 @@ const sidebarItems = sortedItems.map(item => {
           gap: 1.5rem;
       }
   }
-
-  /* FAQ SECTION (AEO/SEO optimized) */
-  .faq-section {
-      margin-top: 2.5rem;
-      border-top: none;
-      padding-top: 0;
-  }
-
-  .faq-list {
-      display: grid;
-      gap: 1.75rem;
-      margin-top: 1.5rem;
-  }
-
-  .faq-item {
-      background-color: transparent;
-      border: none;
-      border-left: 3px solid var(--border);
-      padding: 0 0 0 1.25rem;
-      border-radius: 0;
-      transition: border-color 0.25s ease;
-      overflow: hidden;
-  }
-
-  .faq-item:hover {
-      border-left-color: var(--accent);
-      box-shadow: none;
-  }
-
-  /* FAQ main collapse styles */
-  .faq-header-row {
-      display: inline-flex;
-      align-items: center;
-      gap: 1.25rem;
-      margin-bottom: 1.5rem;
-      transition: margin 0.3s ease;
-      cursor: pointer;
-      user-select: none;
-  }
-
-  .faq-section--collapsed .faq-header-row {
-      margin-bottom: 0;
-  }
-
-  .toggle-faq-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      color: var(--text-header);
-      font-family: var(--font-heading);
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      padding: 6px 14px;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  }
-
-  .toggle-faq-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      background-color: var(--accent-glow);
-  }
-
-  .faq-toggle-icon {
-      width: 14px;
-      height: 14px;
-      transition: transform 0.3s ease;
-  }
-
-  /* Rotate icon when collapsed (arrow pointing down) */
-  .faq-section--collapsed .faq-toggle-icon {
-      transform: rotate(180deg);
-  }
-
-  .faq-body-collapsible {
-      max-height: 1200px;
-      overflow: hidden;
-      transition: max-height 0.4s cubic-bezier(0, 1, 0, 1);
-  }
-
-  .faq-section--collapsed .faq-body-collapsible {
-      max-height: 0;
-  }
-
-  .faq-question {
-      margin: 0;
-      padding: 0.2rem 0 0.5rem 0;
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-header);
-  }
-
-  .faq-answer {
-      margin: 0;
-      padding: 0 0 0.2rem 0;
-      font-size: 0.95rem;
-      line-height: 1.6;
-      color: var(--text-main);
-  }
-
-  .faq-answer a {
-      color: var(--accent);
-      text-decoration: none;
-      border-bottom: 1px dashed var(--accent);
-  }
-
-  .faq-answer a:hover {
-      border-bottom-style: solid;
-  }
 </style>
 
 <script>
@@ -1677,8 +787,8 @@ const sidebarItems = sortedItems.map(item => {
       const headerSearchInput = document.getElementById('header-search-input');
 
       function syncSearch(value) {
-          if (headerSearchInput && headerSearchInput.value !== value) {
-              headerSearchInput.value = value;
+          if (headerSearchInput && (headerSearchInput as HTMLInputElement).value !== value) {
+              (headerSearchInput as HTMLInputElement).value = value;
           }
           searchQuery = value.toLowerCase().trim();
           applyFilters();
@@ -1686,7 +796,7 @@ const sidebarItems = sortedItems.map(item => {
 
       if (headerSearchInput) {
           headerSearchInput.addEventListener('input', (e) => {
-              syncSearch(e.target.value);
+              syncSearch((e.target as HTMLInputElement).value);
           });
       }
 
@@ -1717,126 +827,10 @@ const sidebarItems = sortedItems.map(item => {
   if (sidebarShowMoreBtn && sidebarList) {
       sidebarShowMoreBtn.addEventListener('click', () => {
           sidebarList.classList.add('sidebar-list--expanded');
-          sidebarShowMoreBtn.closest('.sidebar-show-more-wrap').style.display = 'none';
+          const parent = sidebarShowMoreBtn.closest('.sidebar-show-more-wrap');
+          if (parent) {
+              (parent as HTMLElement).style.display = 'none';
+          }
       });
-  }
-
-  // Twitch/YouTube Live Swapper and Collapse Toggle
-  const streamBlock = document.getElementById('stream-block');
-  const statusDot = document.getElementById('stream-status-dot');
-  const statusText = document.getElementById('stream-status-text');
-  const embedContainer = document.getElementById('stream-embed-container');
-  const toggleBtn = document.getElementById('toggle-stream-btn');
-  const toggleText = toggleBtn?.querySelector('.toggle-text');
-  const youtubeId = streamBlock?.getAttribute('data-youtube-id') || 'e-RHZvID8q8';
-
-  if (streamBlock && embedContainer) {
-      // 1. Fetch live status from Decapi.me
-      fetch('https://decapi.me/twitch/uptime/ialexeyru')
-          .then(res => res.text())
-          .then(text => {
-              const isLive = !text.toLowerCase().includes('offline');
-              if (isLive) {
-                  statusDot?.classList.add('live');
-                  if (statusText) statusText.textContent = 'LIVE: Трансляция на Twitch';
-                  streamBlock.classList.add('live-border');
-                  embedContainer.innerHTML = `
-                      <iframe
-                          src="https://player.twitch.tv/?channel=ialexeyru&parent=ialexey.ru&parent=localhost&parent=127.0.0.1&autoplay=false"
-                          style="border: 0; width: 100%; height: 100%;"
-                          allowfullscreen="true">
-                      </iframe>
-                  `;
-              } else {
-                  statusDot?.classList.add('offline');
-                  if (statusText) statusText.textContent = 'Видео';
-                  streamBlock.classList.add('offline-border');
-                  embedContainer.innerHTML = `
-                      <iframe
-                          src="https://www.youtube.com/embed/${youtubeId}"
-                          style="border: 0; width: 100%; height: 100%;"
-                          allowfullscreen="true"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-                      </iframe>
-                  `;
-              }
-          })
-          .catch(() => {
-              // Fallback to YouTube on error
-              statusDot?.classList.add('offline');
-              if (statusText) statusText.textContent = 'Видео';
-              streamBlock.classList.add('offline-border');
-              embedContainer.innerHTML = `
-                  <iframe
-                      src="https://www.youtube.com/embed/${youtubeId}"
-                      style="border: 0; width: 100%; height: 100%;"
-                      allowfullscreen="true"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-                  </iframe>
-              `;
-          });
-
-      // 2. Collapse Toggle
-      if (toggleBtn && toggleText) {
-          toggleBtn.addEventListener('click', () => {
-              const isCollapsed = streamBlock.classList.toggle('stream-banner--collapsed');
-              toggleText.textContent = isCollapsed ? 'Развернуть' : 'Свернуть';
-          });
-      }
-  }
-
-  // FAQ Collapse Toggle
-  const faqSection = document.getElementById('faq');
-  const toggleFaqBtn = document.getElementById('toggle-faq-btn');
-  const faqToggleText = toggleFaqBtn?.querySelector('.faq-toggle-text');
-
-  if (faqSection && toggleFaqBtn && faqToggleText) {
-      const toggleFAQ = () => {
-          const isCollapsed = faqSection.classList.toggle('faq-section--collapsed');
-          faqToggleText.textContent = isCollapsed ? 'Развернуть' : 'Свернуть';
-      };
-      
-      toggleFaqBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toggleFAQ();
-      });
-
-      const faqHeaderRow = faqSection.querySelector('.faq-header-row');
-      if (faqHeaderRow) {
-          faqHeaderRow.style.cursor = 'pointer';
-          faqHeaderRow.addEventListener('click', toggleFAQ);
-      }
-  }
-
-  // Bulk Likes Loader for the main page
-  const likesBadges = document.querySelectorAll('.post-likes-badge');
-  if (likesBadges.length > 0) {
-      const ids = Array.from(likesBadges)
-          .map(badge => badge.getAttribute('data-post-id'))
-          .filter(Boolean);
-          
-      if (ids.length > 0) {
-          fetch(`/api/likes/batch?ids=${ids.join(',')}`)
-              .then(res => res.json())
-              .then(data => {
-                  if (data) {
-                      likesBadges.forEach(badge => {
-                          const postId = badge.getAttribute('data-post-id');
-                          const info = data[postId];
-                          if (info) {
-                              const valEl = badge.querySelector('.likes-count-val');
-                              if (valEl) {
-                                  valEl.textContent = String(info.likes);
-                              }
-                              (badge as HTMLElement).style.display = 'inline-flex';
-                              if (info.user_liked) {
-                                  badge.classList.add('liked');
-                              }
-                          }
-                      });
-                  }
-              })
-              .catch(err => console.error('Error fetching batch likes:', err));
-      }
   }
 </script>

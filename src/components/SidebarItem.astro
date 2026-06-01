@@ -1,0 +1,107 @@
+---
+import {
+  formatTimeOnly,
+  truncateText,
+  removeLeadingEmoji,
+  getSmartBadge,
+  getPostPath,
+  formatViewsCount
+} from '../utils/helpers';
+
+interface Props {
+  item: any;
+  index: number;
+}
+
+const { item, index } = Astro.props;
+
+const timeStr = formatTimeOnly(item.date);
+const title = truncateText(removeLeadingEmoji(item.text || ""), 120) || `Обновление ленты ${item.message_id}`;
+const postUrl = getPostPath(item);
+const isHidden = index >= 10;
+const badge = getSmartBadge(item.text);
+---
+
+<a 
+    href={postUrl} 
+    class={`sidebar-item ${isHidden ? 'sidebar-item--hidden' : ''}`}
+    data-category={badge.class}
+    data-search-text={(title + " " + item.text).toLowerCase()}
+>
+    <span class="sidebar-item-time">{timeStr}</span>
+    <span class="sidebar-item-text">{title}</span>
+    {item.views > 0 && (
+        <span class="sidebar-item-views" title="Просмотры в Telegram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="views-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            {formatViewsCount(item.views)}
+        </span>
+    )}
+</a>
+
+<style>
+  .sidebar-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 10px 12px;
+      margin: 0 -12px;
+      border-bottom: 1px dashed var(--border-dashed);
+      border-radius: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      color: inherit;
+  }
+
+  .sidebar-item:last-child {
+      border-bottom: 1px dashed transparent;
+  }
+
+  .sidebar-item:hover {
+      background-color: var(--card-bg);
+      border-color: var(--border-hover);
+      box-shadow: 0 4px 15px var(--accent-glow);
+  }
+
+  .sidebar-item-time {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      flex: 0 0 42px;
+      font-weight: 400;
+      margin-top: 0.15rem;
+  }
+
+  .sidebar-item-text {
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: var(--text-main);
+      font-weight: 500;
+      flex-grow: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+  }
+
+  .sidebar-item:hover .sidebar-item-text {
+      color: var(--accent);
+  }
+
+  .sidebar-item-views {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      flex-shrink: 0;
+      align-self: center;
+      margin-left: auto;
+  }
+
+  .views-icon {
+      width: 12px;
+      height: 12px;
+      opacity: 0.7;
+  }
+</style>
