@@ -45,6 +45,20 @@ git push
 
 После `git push` сервер автоматически применит все изменения (включая код Python-коллектора или скрипта деплоя) в течение одной минуты.
 
+## Nginx cache headers
+
+Для PageSpeed важно, чтобы fingerprinted ассеты и изображения отдавались с явным TTL. В server block `ialexey.ru` нужно подключить:
+
+```nginx
+include /home/deploy/repos/ialexey-web/deploy/nginx/ialexey-cache.conf;
+```
+
+После изменения nginx-конфига:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
 ## Что удалено из старого снимка сервера
 Вся логика локального сервера-заглушки перенесена в удобную структуру репозитория. Динамические файлы данных (`feed/data/`), логи и файл секретов (`feed/ialexey-feed.env`) добавлены в `.gitignore`, чтобы не скомпрометировать конфиденциальные токены в публичном репозитории.
-

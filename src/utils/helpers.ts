@@ -1,4 +1,5 @@
 // Shared helper functions for ialexey.ru Astro website
+import sanitizeHtmlLibrary from 'sanitize-html';
 
 export function cleanText(text: string): string {
   return (text || "").replace(/\n{3,}/g, "\n\n").trim();
@@ -147,19 +148,27 @@ export function formatViewsCount(views: number): string {
 
 export function sanitizeHtml(htmlStr: string): string {
   if (!htmlStr) return '';
-  // Remove script tags and their content
-  let sanitized = htmlStr.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-  // Remove style tags and their content
-  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-  
-  // Remove event handlers (e.g. onload, onerror, onclick) and javascript: hrefs
-  sanitized = sanitized.replace(/on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
-  sanitized = sanitized.replace(/href\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|[^\s>]*javascript:[^\s>]*)/gi, '');
-
-  // Strip unsafe tags like iframe, embed, object, form, input, button, textarea, meta, link, head, body, html
-  sanitized = sanitized.replace(/<(iframe|embed|object|form|input|button|textarea|meta|link|head|body|html|applet|base|canvas|frame|frameset|script|noscript|audio|video|source|track|map|area|svg|math|style)\b[^>]*>/gi, '');
-  sanitized = sanitized.replace(/<\/(iframe|embed|object|form|input|button|textarea|meta|link|head|body|html|applet|base|canvas|frame|frameset|script|noscript|audio|video|source|track|map|area|svg|math|style)>/gi, '');
-  
-  return sanitized;
+  return sanitizeHtmlLibrary(htmlStr, {
+    allowedTags: [
+      'a', 'b', 'blockquote', 'br', 'code', 'del', 'div', 'em', 'i', 'li',
+      'ol', 'p', 'pre', 's', 'span', 'strong', 'u', 'ul'
+    ],
+    allowedAttributes: {
+      a: ['href', 'name', 'target', 'rel'],
+      code: ['class'],
+      pre: ['class'],
+      span: ['class'],
+      div: ['class'],
+      p: ['class']
+    },
+    allowedSchemes: ['http', 'https', 'mailto', 'tg'],
+    allowedSchemesByTag: {
+      a: ['http', 'https', 'mailto', 'tg']
+    },
+    transformTags: {
+      a: sanitizeHtmlLibrary.simpleTransform('a', {
+        rel: 'noopener noreferrer'
+      }, true)
+    }
+  });
 }
-

@@ -4,13 +4,14 @@ interface Props {
 }
 
 const { youtubeId } = Astro.props;
+const youtubeThumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
 ---
 
 <div class="stream-banner" id="stream-block" data-youtube-id={youtubeId}>
     <div class="stream-header-row">
         <div class="stream-title-wrap">
-            <span class="stream-status-dot" id="stream-status-dot"></span>
-            <span class="stream-status-text" id="stream-status-text">Загрузка трансляции...</span>
+            <span class="stream-status-dot offline" id="stream-status-dot"></span>
+            <span class="stream-status-text" id="stream-status-text">Видео</span>
         </div>
         <button id="toggle-stream-btn" class="toggle-stream-btn" aria-label="Свернуть блок">
             <span class="toggle-text">Свернуть</span>
@@ -18,11 +19,23 @@ const { youtubeId } = Astro.props;
         </button>
     </div>
     <div class="stream-body-collapsible" id="stream-body-collapsible">
-        <!-- Responsive Video Embed Container -->
         <div class="stream-embed-container" id="stream-embed-container">
-            <!-- Embed will be dynamically injected by JS below -->
-            <div class="stream-skeleton" id="stream-skeleton">
-                <div class="stream-skeleton-glow"></div>
+            <div class="stream-lazy-cover youtube-cover" id="stream-play-trigger">
+                <img
+                    src={youtubeThumbnailUrl}
+                    alt="Запустить видео"
+                    class="stream-cover-img"
+                    width="640"
+                    height="360"
+                    loading="eager"
+                    decoding="async"
+                    fetchpriority="high"
+                />
+                <div class="cover-overlay"></div>
+                <div class="play-btn-circle yt-red-btn">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon-svg"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <span class="cover-label">Запустить видео</span>
             </div>
         </div>
     </div>
@@ -37,27 +50,18 @@ const { youtubeId } = Astro.props;
   const toggleText = toggleBtn?.querySelector('.toggle-text');
   const youtubeId = streamBlock?.getAttribute('data-youtube-id') || 'e-RHZvID8q8';
 
-  // Pick the best available YouTube thumbnail (maxres → sd → hq)
-  // YouTube returns a tiny 120×90 placeholder when maxresdefault doesn't exist
-  function getBestThumbnail(videoId) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        // If width ≤ 120 — YouTube served the «no thumbnail» placeholder → fallback
-        if (img.naturalWidth <= 120) {
-          resolve(`https://img.youtube.com/vi/${videoId}/sddefault.jpg`);
-        } else {
-          resolve(`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`);
-        }
-      };
-      img.onerror = () => resolve(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`);
-      img.src = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-    });
-  }
-
-  function buildYoutubeCover(videoId, thumbnailUrl) {
+  function buildYoutubeCover(videoId) {
     return `
-      <div class="stream-lazy-cover youtube-cover" id="stream-play-trigger" style="background-image: url('${thumbnailUrl}');">
+      <div class="stream-lazy-cover youtube-cover" id="stream-play-trigger">
+          <img
+              src="https://img.youtube.com/vi/${videoId}/maxresdefault.jpg"
+              alt="Запустить видео"
+              class="stream-cover-img"
+              width="640"
+              height="360"
+              loading="lazy"
+              decoding="async"
+          />
           <div class="cover-overlay"></div>
           <div class="play-btn-circle yt-red-btn">
               <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon-svg"><path d="M8 5v14l11-7z"/></svg>
@@ -86,22 +90,21 @@ const { youtubeId } = Astro.props;
     statusDot?.classList.add('offline');
     if (statusText) statusText.textContent = 'Видео';
     streamBlock?.classList.add('offline-border');
-    getBestThumbnail(videoId).then(url => {
-      if (!embedContainer) return;
-      embedContainer.innerHTML = buildYoutubeCover(videoId, url);
-      attachYoutubeClick(videoId);
-    });
+    embedContainer.innerHTML = buildYoutubeCover(videoId);
+    attachYoutubeClick(videoId);
   }
 
-  if (streamBlock && embedContainer) {
-      // 1. Fetch live status from Decapi.me
+  function checkLiveStatus() {
+      if (!streamBlock || !embedContainer) return;
       fetch('https://decapi.me/twitch/uptime/ialexeyru')
           .then(res => res.text())
           .then(text => {
               const isLive = !text.toLowerCase().includes('offline');
               if (isLive) {
+                  statusDot?.classList.remove('offline');
                   statusDot?.classList.add('live');
                   if (statusText) statusText.textContent = 'LIVE: Трансляция на Twitch';
+                  streamBlock.classList.remove('offline-border');
                   streamBlock.classList.add('live-border');
                   
                   embedContainer.innerHTML = `
@@ -124,18 +127,27 @@ const { youtubeId } = Astro.props;
                       `;
                   });
               } else {
-                  showYoutubeOffline(youtubeId);
+                  statusDot?.classList.add('offline');
+                  if (statusText) statusText.textContent = 'Видео';
+                  streamBlock.classList.add('offline-border');
               }
           })
-          .catch(() => showYoutubeOffline(youtubeId));
+          .catch(() => {});
+  }
 
-      // 2. Collapse Toggle
+  if (streamBlock && embedContainer) {
+      attachYoutubeClick(youtubeId);
+
       if (toggleBtn && toggleText) {
           toggleBtn.addEventListener('click', () => {
               const isCollapsed = streamBlock.classList.toggle('stream-banner--collapsed');
               toggleText.textContent = isCollapsed ? 'Развернуть' : 'Свернуть';
           });
       }
+
+      window.addEventListener('load', () => {
+          window.setTimeout(checkLiveStatus, 1200);
+      }, { once: true });
   }
 </script>
 
@@ -312,10 +324,12 @@ const { youtubeId } = Astro.props;
       background: linear-gradient(135deg, #6441a5 0%, #2b1b54 100%);
   }
 
-  .youtube-cover {
-      background-position: center;
-      background-size: cover;
-      background-repeat: no-repeat;
+  .stream-cover-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
   }
 
   .cover-overlay {

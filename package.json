@@ -7,13 +7,18 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "node scripts/generate-responsive-images.mjs && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.18",
     "@astrojs/sitemap": "^3.7.3",
-    "astro": "^6.4.2"
+    "astro": "^6.4.2",
+    "sanitize-html": "^2.17.4"
+  },
+  "devDependencies": {
+    "@types/sanitize-html": "^2.16.1",
+    "sharp": "^0.34.5"
   }
 }

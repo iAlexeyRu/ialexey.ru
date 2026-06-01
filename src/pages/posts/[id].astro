@@ -826,25 +826,39 @@ const schema = JSON.stringify(schemaObject);
   
   if (likeBtn && likeCount) {
       const postId = likeBtn.getAttribute('data-post-id');
+      const likesApiUrl = `/api/likes?post_id=${encodeURIComponent(postId || '')}`;
+      const isLocalPreview = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+
+      const fetchLikesJson = async (url, options) => {
+          const res = await fetch(url, options);
+          const contentType = res.headers.get('content-type') || '';
+          if (!res.ok || !contentType.includes('application/json')) {
+              return null;
+          }
+          return res.json();
+      };
       
       // Load initial likes count and status
-      fetch(`/api/likes?post_id=${postId}`)
-          .then(res => res.json())
-          .then(data => {
-              if (data && typeof data.likes === 'number') {
-                  likeCount.textContent = String(data.likes);
-                  if (data.user_liked) {
-                      likeBtn.classList.add('liked');
+      if (!isLocalPreview) {
+          fetchLikesJson(likesApiUrl)
+              .then(data => {
+                  if (data && typeof data.likes === 'number') {
+                      likeCount.textContent = String(data.likes);
+                      if (data.user_liked) {
+                          likeBtn.classList.add('liked');
+                      }
                   }
-              }
-          })
-          .catch(err => console.error('Error fetching likes:', err));
+              })
+              .catch(() => {});
+      }
           
       // Click handler
       likeBtn.addEventListener('click', () => {
+          if (isLocalPreview) {
+              return;
+          }
           likeBtn.setAttribute('disabled', 'true');
-          fetch(`/api/likes?post_id=${postId}`, { method: 'POST' })
-              .then(res => res.json())
+          fetchLikesJson(likesApiUrl, { method: 'POST' })
               .then(data => {
                   if (data && typeof data.likes === 'number') {
                       likeCount.textContent = String(data.likes);
@@ -855,7 +869,7 @@ const schema = JSON.stringify(schemaObject);
                       }
                   }
               })
-              .catch(err => console.error('Error toggling like:', err))
+              .catch(() => {})
               .finally(() => {
                   likeBtn.removeAttribute('disabled');
               });

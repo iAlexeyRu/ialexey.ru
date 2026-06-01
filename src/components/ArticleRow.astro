@@ -1,4 +1,6 @@
 ---
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   formatDateRussian,
   truncateText,
@@ -25,6 +27,29 @@ const desc = truncateText(item.desc || item.text || "", 180);
 const isHabr = !!item.url;
 const postUrl = isHabr ? item.url : getPostPath(item);
 const isHidden = index >= 5;
+const imageSrc = item.image
+  ? (item.image.startsWith('http') ? item.image : `/${item.image}`)
+  : "";
+
+function getResponsiveImageSet(image: string) {
+  if (!image || image.startsWith('http') || !image.startsWith('habr-images/')) {
+    return "";
+  }
+
+  const parsed = path.parse(image);
+  const entries = [360, 640, 960]
+    .map((width) => {
+      const variant = `/${parsed.dir}/${parsed.name}-${width}.webp`;
+      const variantPath = path.join(process.cwd(), 'public', parsed.dir, `${parsed.name}-${width}.webp`);
+      return fs.existsSync(variantPath) ? `${variant} ${width}w` : "";
+    })
+    .filter(Boolean);
+
+  return entries.join(', ');
+}
+
+const imageSrcSet = getResponsiveImageSet(item.image || "");
+const imageSizes = "(max-width: 600px) calc(100vw - 3rem), 240px";
 
 // Determine badge dynamically or from Habr categories
 let badge = { label: "Статьи", class: "badge--news", emoji: "📰" };
@@ -57,11 +82,14 @@ if (item.categories && item.categories.length > 0) {
     <div class="article-row__img-container">
         {item.image ? (
             <img 
-                src={item.image.startsWith('http') ? item.image : `/${item.image}`} 
+                src={imageSrc}
+                srcset={imageSrcSet || undefined}
+                sizes={imageSrcSet ? imageSizes : undefined}
                 class="article-row__img" 
                 alt={title} 
                 loading={index < 2 ? "eager" : "lazy"}
                 fetchpriority={index === 0 ? "high" : undefined}
+                decoding="async"
                 width="240"
                 height="135"
             />
@@ -238,7 +266,7 @@ if (item.categories && item.categories.length > 0) {
       border-radius: 4px;
       letter-spacing: 0.5px;
   }
-  .badge--leaks { background-color: #ff2a3b; color: #ffffff; }
+  .badge--leaks { background-color: #c9182b; color: #ffffff; }
   .badge--ai { background-color: #00bcff; color: #000000; }
   .badge--neural { background-color: #bd00ff; color: #ffffff; }
   .badge--news { background-color: #00e676; color: #000000; }
