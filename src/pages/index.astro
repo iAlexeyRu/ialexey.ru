@@ -1,6 +1,7 @@
 ---
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import Layout from '../layouts/Layout.astro';
 import habrFallback from '../data/habr.json';
 import ArticleRow from '../components/ArticleRow.astro';
@@ -235,7 +236,7 @@ const mainFeaturedItems = candidatesWithViews
 // 2. "Статьи" - Fetch Habr articles at build time, fallback to local JSON
 let articleItems = [];
 try {
-  const habrRes = await fetch('https://habr.com/ru/rss/users/iAlexeyRu/articles/?fl=ru', {
+  const habrRes = await fetch('https://habr.com/ru/rss/users/ialexeyru/publications/articles/?fl=ru', {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
@@ -316,8 +317,62 @@ if (fs.existsSync(habrViewsCachePath)) {
   }
 }
 
+const habrImagesDir = path.join(process.cwd(), 'public', 'habr-images');
+if (!fs.existsSync(habrImagesDir)) {
+  try {
+    fs.mkdirSync(habrImagesDir, { recursive: true });
+  } catch (e) {
+    console.error('Failed to create habr-images directory:', e);
+  }
+}
+
+async function downloadHabrImage(url: string): Promise<string> {
+  if (!url || !url.startsWith('http')) {
+    return url;
+  }
+  try {
+    const hash = crypto.createHash('md5').update(url).digest('hex');
+    let ext = '.jpg';
+    const extMatch = url.match(/\.(png|jpg|jpeg|gif|webp|svg)(?:\?|$)/i);
+    if (extMatch) {
+      ext = extMatch[0].toLowerCase();
+      if (ext.includes('?')) {
+        ext = ext.split('?')[0];
+      }
+    }
+    const filename = `${hash}${ext}`;
+    const filepath = path.join(habrImagesDir, filename);
+    const publicPath = `habr-images/${filename}`;
+
+    if (fs.existsSync(filepath)) {
+      return publicPath;
+    }
+
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (res.ok) {
+      const buffer = Buffer.from(await res.arrayBuffer());
+      fs.writeFileSync(filepath, buffer);
+      console.log(`Downloaded image: ${url} -> ${filepath}`);
+      return publicPath;
+    }
+  } catch (e: any) {
+    console.error(`Failed to download Habr image ${url}:`, e.message || e);
+  }
+  return url;
+}
+
 try {
   articleItems = await Promise.all(articleItems.map(async (item) => {
+    let localImage = item.image;
+    if (item.image && item.image.startsWith('http')) {
+      localImage = await downloadHabrImage(item.image);
+    }
+
     if (item.url && item.url.includes('habr.com')) {
       const now = Date.now();
       const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -325,7 +380,7 @@ try {
       const cached = habrViewsCache[normUrl] || habrViewsCache[item.url] || habrViewsCache[item.url + "/"];
 
       if (cached && (now - cached.fetchedAt) < CACHE_TTL_MS) {
-        return { ...item, views: cached.views };
+        return { ...item, image: localImage, views: cached.views };
       }
 
       try {
@@ -356,7 +411,7 @@ try {
             }
             habrViewsCache[normUrl] = { views, fetchedAt: now };
             cacheChanged = true;
-            return { ...item, views };
+            return { ...item, image: localImage, views };
           }
         }
       } catch (e: any) {
@@ -365,10 +420,10 @@ try {
 
       // Fallback to expired cached views on request failure to avoid resetting views to 0
       if (cached) {
-        return { ...item, views: cached.views };
+        return { ...item, image: localImage, views: cached.views };
       }
     }
-    return item;
+    return { ...item, image: localImage };
   }));
 
   if (cacheChanged) {
