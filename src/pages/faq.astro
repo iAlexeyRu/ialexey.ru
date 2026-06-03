@@ -1,0 +1,60 @@
+---
+import Layout from '../layouts/Layout.astro';
+import FaqSection from '../components/FaqSection.astro';
+---
+
+<Layout title="FAQ — Алексей Гетманец" description="Часто задаваемые вопросы (FAQ) об Алексее Гетманце: сливы новостей ИИ, блоги и сообщества.">
+    <main class="faq-wrap">
+        <h1 class="page-title">Часто задаваемые вопросы</h1>
+        <p class="faq-subtitle">
+            Ответы на популярные вопросы о проектах, источниках новостей ИИ и деятельности Алексея Гетманца.
+        </p>
+
+        <div class="faq-card">
+            <FaqSection />
+        </div>
+    </main>
+</Layout>
+
+<style>
+    .faq-wrap {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem 0 3rem;
+    }
+
+    .page-title {
+        font-size: 2.2rem;
+        margin-bottom: 0.75rem;
+        text-align: center;
+        background: linear-gradient(to right, var(--text-header), var(--text-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .faq-subtitle {
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        margin-bottom: 3.5rem;
+        line-height: 1.5;
+    }
+
+    .faq-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2.5rem;
+    }
+
+    /* Remove component margin inside the card wrapper */
+    .faq-card :global(.faq-section) {
+        margin-top: 0;
+    }
+
+    @media (max-width: 768px) {
+        .faq-card {
+            padding: 1.5rem;
+        }
+    }
+</style>

@@ -57,6 +57,12 @@
           faqHeaderRow.style.cursor = 'pointer';
           faqHeaderRow.addEventListener('click', toggleFAQ);
       }
+
+      // Automatically expand FAQ if on the dedicated FAQ page
+      if (window.location.pathname.includes('/faq')) {
+          faqSection.classList.remove('faq-section--collapsed');
+          faqToggleText.textContent = 'Свернуть';
+      }
   }
 </script>
 
