@@ -267,16 +267,36 @@ if (item.categories && item.categories.length > 0) {
       align-items: center;
       font-family: var(--font-mono);
       font-size: 0.65rem;
-      font-weight: bold;
+      font-weight: 700;
       text-transform: uppercase;
-      padding: 3px 10px;
+      padding: 3px 8px;
       border-radius: 4px;
       letter-spacing: 0.5px;
+      background-color: rgba(255, 255, 255, 0.03);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
   }
-  .badge--leaks { background-color: #c9182b; color: #ffffff; }
-  .badge--ai { background-color: #00bcff; color: #000000; }
-  .badge--neural { background-color: #bd00ff; color: #ffffff; }
-  .badge--news { background-color: #00e676; color: #000000; }
+  .badge--leaks {
+      background-color: rgba(240, 68, 101, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(240, 68, 101, 0.25);
+  }
+  .badge--ai {
+      background-color: rgba(255, 255, 255, 0.03);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+  }
+  .badge--neural {
+      background-color: rgba(255, 255, 255, 0.03);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+  }
+  .badge--news {
+      background-color: rgba(255, 255, 255, 0.03);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+  }
 
   @media (max-width: 600px) {
       .article-row {

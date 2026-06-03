@@ -526,8 +526,8 @@ const featuredCriterionText = mainFeaturedItems.some(item => item.views > 0)
                               <svg class="plus-card__diamond" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <defs>
                                       <linearGradient id="diamond-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                          <stop offset="0%" stop-color="#00f2fe" />
-                                          <stop offset="100%" stop-color="#4facfe" />
+                                          <stop offset="0%" stop-color="#FF5E7E" />
+                                          <stop offset="100%" stop-color="#F04465" />
                                       </linearGradient>
                                   </defs>
                                   <path d="M12 2L20 8L12 22L4 8L12 2Z" fill="url(#diamond-grad)" />
@@ -1360,8 +1360,8 @@ const featuredCriterionText = mainFeaturedItems.some(item => item.views > 0)
     .plus-card {
         position: relative;
         background: linear-gradient(135deg, rgba(17, 22, 32, 0.7) 0%, rgba(20, 28, 45, 0.8) 100%);
-        border: 1px solid rgba(0, 242, 254, 0.25);
-        box-shadow: 0 8px 32px rgba(79, 172, 254, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(240, 68, 101, 0.2);
+        box-shadow: 0 8px 32px rgba(240, 68, 101, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.05);
         border-radius: 12px;
         padding: 1.25rem;
         display: flex;
@@ -1373,19 +1373,19 @@ const featuredCriterionText = mainFeaturedItems.some(item => item.views > 0)
 
     html[data-theme="light"] .plus-card {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(240, 244, 250, 0.95) 100%);
-        border: 1px solid rgba(79, 172, 254, 0.3);
-        box-shadow: 0 8px 24px rgba(79, 172, 254, 0.08);
+        border: 1px solid rgba(240, 68, 101, 0.2);
+        box-shadow: 0 8px 24px rgba(240, 68, 101, 0.06);
     }
 
     .plus-card:hover {
-        border-color: rgba(0, 242, 254, 0.45);
-        box-shadow: 0 12px 36px rgba(79, 172, 254, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        border-color: rgba(240, 68, 101, 0.35);
+        box-shadow: 0 12px 36px rgba(240, 68, 101, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.08);
         transform: translateY(-2px);
     }
 
     html[data-theme="light"] .plus-card:hover {
-        border-color: rgba(79, 172, 254, 0.5);
-        box-shadow: 0 12px 30px rgba(79, 172, 254, 0.15);
+        border-color: rgba(240, 68, 101, 0.35);
+        box-shadow: 0 12px 30px rgba(240, 68, 101, 0.10);
     }
 
     .plus-card__close {
@@ -1432,8 +1432,8 @@ const featuredCriterionText = mainFeaturedItems.some(item => item.views > 0)
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(79, 172, 254, 0.15) 100%);
-        border: 1px solid rgba(79, 172, 254, 0.3);
+        background: linear-gradient(135deg, rgba(240, 68, 101, 0.08) 0%, rgba(240, 68, 101, 0.15) 100%);
+        border: 1px solid rgba(240, 68, 101, 0.25);
         border-radius: 10px;
     }
 
@@ -1460,7 +1460,7 @@ const featuredCriterionText = mainFeaturedItems.some(item => item.views > 0)
         font-size: 1.05rem;
         font-weight: 800;
         margin: 0;
-        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+        background: linear-gradient(135deg, #FF5E7E 0%, #F04465 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
@@ -1494,7 +1494,7 @@ const featuredCriterionText = mainFeaturedItems.some(item => item.views > 0)
     }
 
     .plus-card__btn {
-        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+        background: linear-gradient(135deg, #FF5E7E 0%, #F04465 100%);
         border: none;
         color: #fff;
         font-family: var(--font-heading);
@@ -1504,12 +1504,12 @@ const featuredCriterionText = mainFeaturedItems.some(item => item.views > 0)
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.25s ease;
-        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.25);
+        box-shadow: 0 4px 15px rgba(240, 68, 101, 0.2);
     }
 
     .plus-card__btn:hover {
         transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        box-shadow: 0 6px 20px rgba(240, 68, 101, 0.3);
         filter: brightness(1.05);
     }
 
